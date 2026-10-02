@@ -1,0 +1,17 @@
+[Unit]
+Description=OneStore API
+After=network.target
+
+[Service]
+Type=simple
+User=onestore
+Group=onestore
+WorkingDirectory=/opt/onestore/backend
+EnvironmentFile=/opt/onestore/backend/.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node dist/main.js
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
