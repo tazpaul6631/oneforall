@@ -41,6 +41,7 @@ Trên trình duyệt, để trống `VITE_API_URL` trong `frontend/.env`. Vite c
 
 APK không dùng được `localhost`, vì đó là chính điện thoại. Sao chép `frontend/.env.example` thành `frontend/.env` rồi điền:
 
+- Cài bằng Android Studio qua cáp USB: `VITE_API_URL=http://127.0.0.1:3000`. Lúc bấm Run, Gradle chạy `adb reverse` để cổng 3000 trên máy tính hiện ra ở tablet.
 - Máy ảo Android trên cùng máy tính: `VITE_API_URL=http://10.0.2.2:3000`
 - Điện thoại thật, cùng Wi-Fi: `VITE_API_URL=http://<IP máy tính>:3000` (IPv4 trong `ipconfig`)
 
@@ -50,11 +51,11 @@ Giá trị này gắn lúc build. Sửa xong chạy lại trong `frontend`:
 npm run apk
 ```
 
-File cài: `frontend/android/app/build/outputs/apk/debug/app-debug.apk`.
+File cài: `frontend/android/app/build/outputs/apk/debug/app-debug.apk`. Lệnh này cần JDK 21; script tự chọn bản trong `C:\Program Files\Java` nếu Java trên PATH là bản cũ hơn.
 
 Backend local phải đang chạy `npm run start:dev`, `NODE_ENV=development`, và `CORS_ORIGIN` để trống. Windows cần mở cổng 3000 trên firewall thì điện thoại mới vào được.
 
-Android chặn HTTP không mã hóa. `AndroidManifest.xml` hiện chưa có `android:usesCleartextTraffic="true"`, nên APK gọi `http://192.168...` có thể bị chặn trước khi tới backend.
+App Android mở bằng `https://localhost`, nên được phép gọi HTTP tới backend local. Vite chỉ đọc `frontend/.env` lúc build, không đọc `.env.example`.
 
 ## Migration
 

@@ -44,6 +44,31 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localPropsFile.withReader('UTF-8') { reader -> localProps.load(reader) }
+}
+def sdkDir = localProps.getProperty('sdk.dir')
+
+afterEvaluate {
+    tasks.matching { it.name == 'installDebug' }.configureEach { task ->
+        task.doLast {
+            if (!sdkDir) return
+            def adb = new File(sdkDir, 'platform-tools' + File.separator + 'adb.exe')
+            if (!adb.exists()) adb = new File(sdkDir, 'platform-tools' + File.separator + 'adb')
+            if (!adb.exists()) {
+                logger.warn('Không thấy adb, bỏ qua chuyển cổng 3000')
+                return
+            }
+            exec {
+                commandLine adb.absolutePath, 'reverse', 'tcp:3000', 'tcp:3000'
+                ignoreExitValue true
+            }
+        }
+    }
+}
+
 try {
     def servicesJSON = file('google-services.json')
     if (servicesJSON.text) {
