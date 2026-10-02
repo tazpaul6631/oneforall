@@ -14,9 +14,15 @@ export const tokenStorage = {
 let onUnauthorized: () => void = () => {};
 export const setUnauthorizedHandler = (fn: () => void) => (onUnauthorized = fn);
 
+/** Trống khi web cùng domain. APK đặt VITE_API_URL=https://ten-mien để gọi server. */
+export function apiUrl(path: string) {
+  const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+  return `${base}/api${path}`;
+}
+
 export async function api<T>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
   const token = tokenStorage.get();
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(apiUrl(path), {
     method: opts.method ?? (opts.body ? 'POST' : 'GET'),
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     body: opts.body ? JSON.stringify(opts.body) : undefined,

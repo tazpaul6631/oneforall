@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">OneStore</string>
+    <string name="title_activity_main">OneStore</string>
+    <string name="package_name">vn.onestore.app</string>
+    <string name="custom_url_scheme">vn.onestore.app</string>
+</resources>

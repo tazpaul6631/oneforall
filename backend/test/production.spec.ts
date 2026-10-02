@@ -15,6 +15,8 @@ describe('production', () => {
     expect(corsOrigin({ CORS_ORIGIN: 'https://quan.vn, https://www.quan.vn' })).toEqual([
       'https://quan.vn',
       'https://www.quan.vn',
+      'https://localhost',
+      'capacitor://localhost',
     ]);
   });
 
