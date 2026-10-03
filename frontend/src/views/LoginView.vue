@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from 'primevue/button';
+import FloatLabel from 'primevue/floatlabel';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Password from 'primevue/password';
@@ -72,81 +73,79 @@ function fillDemo(email: string) {
 </script>
 
 <template>
-  <div class="page">
-    <section class="intro">
-      <h1>OneStore</h1>
-      <p>Một nền tảng cho quán cà phê, nhà hàng, cửa hàng bán lẻ và rạp chiếu phim. Mỗi tài khoản thấy đúng màn hình và quy trình của mô hình mình dùng.</p>
+  <div
+    class="grid min-h-dvh items-center gap-6 p-4 md:p-8 lg:grid-cols-[minmax(280px,1fr)_minmax(360px,480px)] lg:gap-16 lg:px-[6vw]">
+    <section class="max-w-lg lg:justify-self-end">
+      <h1 class="mb-3 text-3xl md:mb-4 md:text-5xl">OneStore</h1>
+      <p class="m-0 text-base leading-relaxed text-muted md:text-lg">Một nền tảng cho quán cà phê, nhà hàng, cửa hàng
+        bán lẻ và rạp chiếu phim. Mỗi tài khoản thấy đúng màn hình và quy trình của mô hình mình dùng.</p>
     </section>
 
-    <section class="card">
-      <div class="tabs" role="tablist">
-        <button role="tab" :aria-selected="mode === 'login'" :class="{ on: mode === 'login' }" @click="mode = 'login'; error = ''">Đăng nhập</button>
-        <button role="tab" :aria-selected="mode === 'register'" :class="{ on: mode === 'register' }" @click="mode = 'register'; error = ''">Tạo cửa hàng</button>
+    <section class="panel p-4 sm:p-6">
+      <div class="mb-5 flex gap-6 border-b border-line" role="tablist">
+        <button type="button" role="tab" raised
+          class="-mb-px cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-0 pt-2 pb-3 font-[inherit] font-medium text-muted"
+          :aria-selected="mode === 'login'" :class="mode === 'login' && 'border-primary text-ink'"
+          @click="mode = 'login'; error = ''">Đăng nhập</button>
+        <button type="button" role="tab" raised
+          class="-mb-px cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-0 pt-2 pb-3 font-[inherit] font-medium text-muted"
+          :aria-selected="mode === 'register'" :class="mode === 'register' && 'border-primary text-ink'"
+          @click="mode = 'register'; error = ''">Tạo cửa hàng</button>
       </div>
 
-      <form class="form" @submit.prevent="submit">
+      <form class="flex flex-col gap-4" @submit.prevent="submit">
         <template v-if="mode === 'register'">
-          <label>Tên cửa hàng<InputText v-model="f.tenantName" fluid autocomplete="organization" /></label>
-          <fieldset class="presets">
-            <legend>Mô hình kinh doanh</legend>
-            <label v-for="p in presets" :key="p.key" class="preset" :class="{ on: f.preset === p.key }">
-              <input type="radio" v-model="f.preset" :value="p.key" />
+          <FloatLabel variant="on">
+            <InputText id="tenant-name" v-model="f.tenantName" fluid autocomplete="organization" />
+            <label for="tenant-name">Tên cửa hàng</label>
+          </FloatLabel>
+          <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
+            <legend class="mb-1 p-0 text-sm font-medium">Mô hình kinh doanh</legend>
+            <label v-for="p in presets" :key="p.key"
+              class="relative flex cursor-pointer flex-col gap-0.5 rounded-lg border border-line px-3 py-2.5"
+              :class="f.preset === p.key && 'border-primary bg-primary-soft'">
+              <input class="absolute opacity-0" type="radio" v-model="f.preset" :value="p.key" />
               <strong>{{ p.label }}</strong>
-              <span>{{ p.description }}</span>
+              <span class="text-[0.82rem] font-normal text-muted">{{ p.description }}</span>
             </label>
           </fieldset>
-          <label>Họ tên chủ cửa hàng<InputText v-model="f.fullName" fluid autocomplete="name" /></label>
+          <FloatLabel variant="on">
+            <InputText id="owner-name" v-model="f.fullName" fluid autocomplete="name" />
+            <label for="owner-name">Họ tên chủ cửa hàng</label>
+          </FloatLabel>
         </template>
 
-        <label>Email<InputText v-model="f.email" type="email" fluid autocomplete="email" /></label>
-        <label>
+        <FloatLabel variant="on">
+          <InputText id="login-email" v-model="f.email" type="email" fluid autocomplete="email" />
+          <label for="login-email">Email</label>
+        </FloatLabel>
+        <label class="field">
           Mật khẩu
-          <Password v-model="f.password" :feedback="false" toggle-mask fluid :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" />
-          <small v-if="mode === 'register'">Ít nhất 8 ký tự</small>
+          <Password v-model="f.password" :feedback="false" toggle-mask fluid
+            :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" />
+          <small v-if="mode === 'register'" class="font-normal text-muted">Ít nhất 8 ký tự</small>
         </label>
 
         <Message v-if="notice" severity="success" size="small">{{ notice }}</Message>
         <Message v-if="error" severity="error" size="small">{{ error }}</Message>
-        <Button type="submit" :label="mode === 'login' ? 'Đăng nhập' : 'Tạo cửa hàng'" :loading="loading" :disabled="!canSubmit" fluid />
+        <Button type="submit" raised :label="mode === 'login' ? 'Đăng nhập' : 'Tạo cửa hàng'" :loading="loading"
+          :disabled="!canSubmit" fluid />
       </form>
 
-      <div v-if="isDev && mode === 'login'" class="demo">
+      <div v-if="isDev && mode === 'login'"
+        class="mt-5 flex flex-col gap-2 border-t border-dashed border-line pt-4 text-[0.82rem] text-muted">
         <span>Tài khoản mẫu (sau khi chạy <code>npm run seed</code>):</span>
-        <div>
-          <Button size="small" severity="secondary" outlined label="Quán cà phê" @click="fillDemo('cafe@demo.vn')" />
-          <Button size="small" severity="secondary" outlined label="Nhà hàng" @click="fillDemo('nhahang@demo.vn')" />
-          <Button size="small" severity="secondary" outlined label="Cửa hàng" @click="fillDemo('shop@demo.vn')" />
-          <Button size="small" severity="secondary" outlined label="Rạp chiếu phim" @click="fillDemo('rap@demo.vn')" />
+        <div class="flex flex-wrap gap-2">
+          <Button size="small" severity="secondary" outlined raised label="Quán cà phê"
+            @click="fillDemo('cafe@demo.vn')" />
+          <Button size="small" severity="secondary" outlined raised label="Nhà hàng"
+            @click="fillDemo('nhahang@demo.vn')" />
+          <Button size="small" severity="secondary" outlined raised label="Cửa hàng"
+            @click="fillDemo('shop@demo.vn')" />
+          <Button size="small" severity="secondary" outlined raised label="Rạp chiếu phim"
+            @click="fillDemo('rap@demo.vn')" />
         </div>
       </div>
     </section>
   </div>
 </template>
-
-<style scoped>
-.page { min-height: 100vh; display: grid; grid-template-columns: minmax(280px, 1fr) minmax(360px, 480px); align-items: center; gap: 4rem; padding: 2rem 6vw; box-sizing: border-box; }
-.intro { max-width: 30rem; justify-self: end; }
-.intro h1 { font-size: 2.75rem; margin-bottom: 1rem; }
-.intro p { font-size: 1.1rem; line-height: 1.65; color: var(--p-text-muted-color); margin: 0; }
-.card { background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 12px; padding: 1.5rem; }
-.tabs { display: flex; gap: 1.5rem; border-bottom: 1px solid var(--p-content-border-color); margin-bottom: 1.25rem; }
-.tabs button { background: none; border: 0; padding: 0.5rem 0 0.75rem; font: inherit; font-weight: 500; color: var(--p-text-muted-color); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-.tabs button.on { color: var(--p-text-color); border-color: var(--p-primary-color); }
-.form { display: flex; flex-direction: column; gap: 1rem; }
-.form label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; font-weight: 500; }
-.form small { font-weight: 400; color: var(--p-text-muted-color); }
-.presets { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
-.presets legend { font-size: 0.9rem; font-weight: 500; margin-bottom: 0.35rem; padding: 0; }
-.preset { position: relative; border: 1px solid var(--p-content-border-color); border-radius: 8px; padding: 0.65rem 0.85rem; cursor: pointer; gap: 0.1rem !important; }
-.preset span { font-weight: 400; font-size: 0.82rem; color: var(--p-text-muted-color); }
-.preset input { position: absolute; opacity: 0; }
-.preset.on { border-color: var(--p-primary-color); background: var(--p-primary-50); }
-.preset:has(input:focus-visible) { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
-.demo { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed var(--p-content-border-color); font-size: 0.82rem; color: var(--p-text-muted-color); display: flex; flex-direction: column; gap: 0.5rem; }
-.demo div { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-@media (max-width: 860px) {
-  .page { grid-template-columns: 1fr; gap: 1.5rem; padding: 1.5rem; }
-  .intro { justify-self: start; }
-  .intro h1 { font-size: 2rem; }
-}
-</style>

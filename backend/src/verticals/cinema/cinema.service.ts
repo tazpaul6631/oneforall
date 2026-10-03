@@ -108,6 +108,14 @@ export class CinemaService {
     return { ...movie, priceVnd: product.priceVnd, vipPriceVnd: vip?.priceVnd ?? null };
   }
 
+  async dropForProduct(productId: string) {
+    const movie = await this.movies.findOne({ productId });
+    if (!movie) return;
+    const shows = await this.shows.find({ movieId: movie.id });
+    if (shows.length) throw new ConflictException('Sản phẩm đang gắn với suất chiếu. Hãy xóa suất chiếu trước.');
+    await this.movies.remove({ id: movie.id });
+  }
+
   async createRoom(dto: RoomDto) {
     const vipRows = dto.vipRows ?? 0;
     if (vipRows > dto.rows) throw new BadRequestException('Số hàng VIP vượt quá số hàng');

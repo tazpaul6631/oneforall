@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { EntitlementService } from '../../platform/entitlement/entitlement.service';
 import { OrderEvent } from '../../core/order/order.lifecycle';
+import { ProductDeletedEvent } from '../../core/product/product.service';
 import { FnbService } from './fnb.service';
 
 @Injectable()
@@ -15,6 +16,11 @@ export class FnbListener {
 
   private async run(fn: () => Promise<unknown>) {
     try { await fn(); } catch (e) { this.log.error(e); }
+  }
+
+  @OnEvent('product.deleted')
+  productDeleted(e: ProductDeletedEvent) {
+    return this.fnb.dropForProduct(e.productId);
   }
 
   @OnEvent('order.created')

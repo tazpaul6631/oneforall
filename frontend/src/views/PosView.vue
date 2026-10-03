@@ -2,6 +2,7 @@
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputNumber from 'primevue/inputnumber';
+import FloatLabel from 'primevue/floatlabel';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
@@ -9,11 +10,11 @@ import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '@/api/http';
-import type { Category, Customer, Order, Preview, Product, Variant } from '@/api/types';
+import type { Category, Customer, ModifierGroup, Order, Preview, Product, Variant } from '@/api/types';
 import { useSession } from '@/stores/session';
 import { newKey, orderCode, vnd } from '@/utils/format';
 
-interface CartLine { key: string; productId: string; variantId: string | null; name: string; unitPriceVnd: number; qty: number }
+interface CartLine { key: string; productId: string; variantId: string | null; optionIds: string[]; name: string; unitPriceVnd: number; qty: number; note: string }
 
 const toast = useToast();
 const session = useSession();
@@ -26,6 +27,7 @@ const customerQuery = ref('');
 const customerHits = ref<Customer[]>([]);
 const categories = ref<Category[]>([]);
 const products = ref<Product[]>([]);
+const groups = ref<ModifierGroup[]>([]);
 const loadError = ref('');
 const activeCat = ref<string | null>(null);
 const search = ref('');
@@ -34,11 +36,14 @@ const discountType = ref<'percent' | 'amount'>('percent');
 const discountValue = ref<number | null>(null);
 const preview = ref<Preview | null>(null);
 const previewError = ref('');
-const variantFor = ref<Product | null>(null);
 
 onMounted(async () => {
   try {
-    [products.value, categories.value] = await Promise.all([api<Product[]>('/products'), api<Category[]>('/categories')]);
+    [products.value, categories.value, groups.value] = await Promise.all([
+      api<Product[]>('/products'),
+      api<Category[]>('/categories'),
+      api<ModifierGroup[]>('/modifier-groups'),
+    ]);
     if (tableId.value && session.has('fnb.table_map')) {
       const floor = await api<{ tables: { id: string; name: string }[] }>('/fnb/tables');
       tableLabel.value = floor.tables.find((t) => t.id === tableId.value)?.name ?? '';
@@ -63,19 +68,80 @@ const visible = computed(() =>
   ),
 );
 
-function add(p: Product, v?: Variant) {
-  const key = `${p.id}:${v?.id ?? ''}`;
+function groupsOf(p: Product) {
+  return groups.value.filter((g) => p.modifierGroupIds.includes(g.id));
+}
+function lineProduct(l: CartLine) {
+  return products.value.find((p) => p.id === l.productId);
+}
+function lineGroups(l: CartLine) {
+  const p = lineProduct(l);
+  return p ? groupsOf(p) : [];
+}
+function describe(p: Product, v: Variant | null, optionIds: string[]) {
+  const chosen = groupsOf(p).flatMap((g) => g.options).filter((o) => optionIds.includes(o.id));
+  const base = v ? `${p.name} (${v.name})` : p.name;
+  return {
+    name: chosen.length ? `${base} · ${chosen.map((o) => o.name).join(', ')}` : base,
+    unitPriceVnd: (v?.priceVnd ?? p.priceVnd) + chosen.reduce((sum, o) => sum + o.extraVnd, 0),
+  };
+}
+function add(p: Product, v: Variant | null, optionIds: string[]) {
+  const ids = [...optionIds];
+  const key = `${p.id}:${v?.id ?? ''}:${[...ids].sort().join(',')}`;
   const ex = cart.value.find((l) => l.key === key);
   if (ex) ex.qty = Math.min(999, ex.qty + 1);
-  else cart.value.push({ key, productId: p.id, variantId: v?.id ?? null, name: v ? `${p.name} (${v.name})` : p.name, unitPriceVnd: v?.priceVnd ?? p.priceVnd, qty: 1 });
+  else {
+    cart.value.push({
+      key, productId: p.id, variantId: v?.id ?? null, optionIds: ids,
+      ...describe(p, v, ids), qty: 1, note: '',
+    });
+  }
 }
 function pick(p: Product) {
-  if (p.variants.length) variantFor.value = p;
-  else add(p);
+  add(p, null, []);
 }
-function chooseVariant(v: Variant) {
-  if (variantFor.value) add(variantFor.value, v);
-  variantFor.value = null;
+function applyChoice(l: CartLine) {
+  const p = lineProduct(l);
+  if (!p) return;
+  const v = p.variants.find((x) => x.id === l.variantId) ?? null;
+  const key = `${p.id}:${v?.id ?? ''}:${[...l.optionIds].sort().join(',')}`;
+  const other = cart.value.find((x) => x !== l && x.key === key);
+  if (other) {
+    other.qty = Math.min(999, other.qty + l.qty);
+    cart.value = cart.value.filter((x) => x !== l);
+    return;
+  }
+  l.key = key;
+  Object.assign(l, describe(p, v, l.optionIds));
+}
+function chooseLineVariant(l: CartLine, variantId: string) {
+  l.variantId = l.variantId === variantId ? null : variantId;
+  applyChoice(l);
+}
+function toggleLineOption(l: CartLine, group: ModifierGroup, optionId: string) {
+  const inGroup = (id: string) => group.options.some((o) => o.id === id);
+  const on = l.optionIds.includes(optionId);
+  if (group.maxSelect === 1) {
+    l.optionIds = l.optionIds.filter((id) => !inGroup(id));
+    if (!on) l.optionIds.push(optionId);
+  } else if (on) l.optionIds = l.optionIds.filter((id) => id !== optionId);
+  else if (l.optionIds.filter(inGroup).length < group.maxSelect) l.optionIds.push(optionId);
+  applyChoice(l);
+}
+const needVariant = computed(() => {
+  const line = cart.value.find((l) => {
+    const p = lineProduct(l);
+    return !!p?.variants.length && !l.variantId;
+  });
+  const p = line ? lineProduct(line) : undefined;
+  return p ? `"${p.name}" cần chọn phiên bản` : '';
+});
+function groupHint(g: ModifierGroup) {
+  const min = g.required ? Math.max(g.minSelect, 1) : g.minSelect;
+  if (min === g.maxSelect) return `chọn ${g.maxSelect}`;
+  if (!min) return `tối đa ${g.maxSelect}`;
+  return `chọn ${min}–${g.maxSelect}`;
 }
 function step(l: CartLine, d: number) {
   l.qty = Math.min(999, l.qty + d);
@@ -84,7 +150,13 @@ function step(l: CartLine, d: number) {
 
 // ----- tính tiền: luôn hỏi server, không tự tính ở client -----
 const payload = computed(() => ({
-  lines: cart.value.map((l) => ({ productId: l.productId, variantId: l.variantId ?? undefined, qty: l.qty })),
+  lines: cart.value.map((l) => ({
+    productId: l.productId,
+    variantId: l.variantId ?? undefined,
+    qty: l.qty,
+    ...(l.optionIds.length ? { optionIds: l.optionIds } : {}),
+    ...(l.note.trim() ? { note: l.note.trim() } : {}),
+  })),
   discount: discountValue.value ? { type: discountType.value, value: discountValue.value } : undefined,
 }));
 const pendingOrderId = ref<string | null>(null);
@@ -111,6 +183,8 @@ watch(payload, (p) => {
 
 const total = computed(() => preview.value?.totalVnd ?? 0);
 const lineTotal = (i: number) => preview.value?.lines[i]?.lineTotalVnd ?? cart.value[i].unitPriceVnd * cart.value[i].qty;
+const lineLabel = (i: number) => preview.value?.lines[i]?.name ?? cart.value[i].name;
+const linePrice = (i: number) => preview.value?.lines[i]?.unitPriceVnd ?? cart.value[i].unitPriceVnd;
 const taxHint = computed(() => {
   const s = session.boot?.settings;
   if (!s || !s.taxRatePercent) return '';
@@ -201,131 +275,159 @@ async function confirmPay() {
 </script>
 
 <template>
-  <p v-if="loadError" class="err">{{ loadError }}</p>
-  <div v-else class="pos">
-    <section class="catalog">
-      <div class="bar">
-        <InputText v-model="search" placeholder="Tìm sản phẩm" aria-label="Tìm sản phẩm" />
-        <div class="cats" role="group" aria-label="Danh mục">
-          <button :class="{ on: !activeCat }" @click="activeCat = null">Tất cả</button>
-          <button v-for="c in categories" :key="c.id" :class="{ on: activeCat === c.id }" @click="activeCat = c.id">{{ c.name }}</button>
+  <p v-if="loadError" class="text-danger">{{ loadError }}</p>
+  <div v-else
+    class="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_340px] md:gap-6 lg:grid-cols-[minmax(0,1fr)_500px]">
+    <section class="min-w-0">
+      <div class="mb-4 flex flex-col gap-3">
+        <FloatLabel variant="on">
+          <InputText id="pos-search" v-model="search" fluid />
+          <label for="pos-search">Tìm sản phẩm</label>
+        </FloatLabel>
+        <div class="flex flex-wrap gap-1.5" role="group" aria-label="Danh mục">
+          <button type="button" class="chip" :class="!activeCat && 'border-primary bg-primary text-on-primary'" raised
+            @click="activeCat = null">Tất cả</button>
+          <button v-for="c in categories" :key="c.id" type="button" class="chip"
+            :class="activeCat === c.id && 'border-primary bg-primary text-on-primary'" raised
+            @click="activeCat = c.id">{{
+              c.name }}</button>
         </div>
       </div>
-      <p v-if="!products.length" class="muted">Chưa có sản phẩm để bán. Thêm sản phẩm ở mục Sản phẩm.</p>
-      <div class="grid">
-        <button v-for="p in visible" :key="p.id" class="tile" @click="pick(p)">
+      <p v-if="!products.length" class="my-2 text-muted">Chưa có sản phẩm để bán. Thêm sản phẩm ở mục Sản phẩm.</p>
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        <button v-for="p in visible" :key="p.id" type="button" class="tile hover:border-primary" raised
+          @click="pick(p)">
           <strong>{{ p.name }}</strong>
-          <span>{{ p.variants.length ? `${p.variants.length} phiên bản` : vnd(p.priceVnd) }}</span>
-          <small v-if="p.sku">{{ p.sku }}</small>
+          <span class="text-sm text-muted">{{ p.variants.length ? `${p.variants.length} phiên bản` : vnd(p.priceVnd)
+          }}</span>
+          <small v-if="p.sku" class="text-sm text-muted">{{ p.sku }}</small>
         </button>
       </div>
     </section>
 
-    <aside class="cart">
+    <aside class="panel flex flex-col gap-3.5 p-4 md:sticky md:top-4">
       <h3>Đơn hiện tại</h3>
-      <p v-if="tableLabel" class="banner">{{ tableLabel }}</p>
-      <div class="customer">
+      <p v-if="tableLabel" class="m-0 rounded-lg bg-primary-soft px-3 py-1.5 font-semibold text-primary-ink">{{
+        tableLabel }}</p>
+      <div class="flex flex-col gap-1.5">
         <template v-if="customer">
-          <span>{{ customer.name }}<small v-if="customer.phone"> · {{ customer.phone }}</small></span>
-          <Button icon="pi pi-times" text rounded size="small" aria-label="Bỏ khách" @click="customer = null" />
+          <div class="flex items-center justify-between gap-2">
+            <span>{{ customer.name }}<small v-if="customer.phone"> · {{ customer.phone }}</small></span>
+            <Button icon="pi pi-times" raised rounded size="small" aria-label="Bỏ khách" @click="customer = null" />
+          </div>
         </template>
         <template v-else>
-          <InputText v-model="customerQuery" placeholder="Gắn khách (tên hoặc số điện thoại)" aria-label="Tìm khách hàng" fluid />
-          <button v-for="c in customerHits" :key="c.id" type="button" class="hit" @click="customer = c; customerQuery = ''; customerHits = []">
-            {{ c.name }}<small v-if="c.phone"> · {{ c.phone }}</small>
+          <FloatLabel variant="on">
+            <InputText id="pos-customer" v-model="customerQuery" fluid />
+            <label for="pos-customer">Gắn khách (tên hoặc số điện thoại)</label>
+          </FloatLabel>
+          <button v-for="c in customerHits" :key="c.id" type="button"
+            class="w-full cursor-pointer rounded-lg border border-line bg-soft px-2.5 py-2 text-left text-sm hover:border-primary"
+            @click="customer = c; customerQuery = ''; customerHits = []">
+            {{ c.name }}<span v-if="c.phone" class="text-muted"> · {{ c.phone }}</span>
           </button>
         </template>
       </div>
-      <p v-if="!cart.length" class="muted">Chọn sản phẩm bên trái để thêm vào đơn.</p>
-      <ul v-else>
-        <li v-for="(l, i) in cart" :key="l.key">
-          <div class="name"><span>{{ l.name }}</span><small>{{ vnd(l.unitPriceVnd) }}</small></div>
-          <div class="qty">
-            <Button icon="pi pi-minus" size="small" text rounded severity="secondary" :aria-label="`Giảm ${l.name}`" @click="step(l, -1)" />
-            <span>{{ l.qty }}</span>
-            <Button icon="pi pi-plus" size="small" text rounded severity="secondary" :aria-label="`Tăng ${l.name}`" @click="step(l, 1)" />
+      <p v-if="!cart.length" class="my-2 text-muted">Chọn sản phẩm bên trái để thêm vào đơn.</p>
+      <ul v-else class="m-0 flex max-h-[60vh] list-none flex-col gap-2.5 overflow-y-auto p-0">
+        <li v-for="(l, i) in cart" :key="l.key" class="flex flex-col gap-1.5 text-sm">
+          <div class="grid grid-cols-[minmax(0,1fr)_auto_0.4fr] items-center gap-2">
+            <div class="flex min-w-0 flex-col"><span class="wrap-break-word">{{ lineLabel(i) }}</span><small
+                class="text-muted">{{ vnd(linePrice(i)) }}</small></div>
+            <div class="flex items-center gap-0.5">
+              <Button icon="pi pi-minus" size="small" raised rounded severity="secondary" :aria-label="`Giảm ${l.name}`"
+                @click="step(l, -1)" />
+              <span class="min-w-6 text-center">{{ l.qty }}</span>
+              <Button icon="pi pi-plus" size="small" raised rounded severity="secondary" :aria-label="`Tăng ${l.name}`"
+                @click="step(l, 1)" />
+            </div>
+            <b class="text-right">{{ vnd(lineTotal(i)) }}</b>
           </div>
-          <b>{{ vnd(lineTotal(i)) }}</b>
+          <div v-if="lineProduct(l)?.variants.length" class="flex flex-col gap-1">
+            <span class="font-medium">Phiên bản</span>
+            <div class="flex flex-wrap gap-1">
+              <button v-for="v in lineProduct(l)?.variants ?? []" :key="v.id" type="button"
+                class="cursor-pointer rounded-full border px-2.5 py-1 text-sm"
+                :class="l.variantId === v.id ? 'border-primary bg-primary text-on-primary' : 'border-line bg-surface'"
+                @click="chooseLineVariant(l, v.id)">{{ v.name }}</button>
+            </div>
+          </div>
+          <div v-for="g in lineGroups(l)" :key="g.id" class="flex flex-col gap-1">
+            <span class="font-medium">{{ g.name }} <span class="font-normal text-muted">{{ groupHint(g) }}</span></span>
+            <div class="flex flex-wrap gap-1">
+              <button v-for="o in g.options" :key="o.id" type="button"
+                class="cursor-pointer rounded-full border px-2.5 py-1 text-sm"
+                :class="l.optionIds.includes(o.id) ? 'border-primary bg-primary text-on-primary' : 'border-line bg-surface'"
+                @click="toggleLineOption(l, g, o.id)">
+                {{ o.name }}<span v-if="o.extraVnd"> +{{ vnd(o.extraVnd) }}</span>
+              </button>
+            </div>
+          </div>
+          <FloatLabel variant="on">
+            <InputText :id="`line-note-${i}`" v-model="l.note" fluid />
+            <label :for="`line-note-${i}`">Ghi chú, ví dụ ít ngọt</label>
+          </FloatLabel>
         </li>
       </ul>
 
-      <div v-if="cart.length" class="discount">
+      <div v-if="cart.length" class="grid grid-cols-[auto_4.5rem_minmax(0,1fr)] items-center gap-2 text-sm">
         <label>Giảm giá</label>
-        <Select v-model="discountType" :options="[{ v: 'percent', l: '%' }, { v: 'amount', l: '₫' }]" option-label="l" option-value="v" aria-label="Loại giảm giá" />
-        <InputNumber v-model="discountValue" :min="0" :max="discountType === 'percent' ? 100 : undefined" :max-fraction-digits="0" locale="vi-VN" placeholder="0" aria-label="Giá trị giảm giá" />
+        <Select v-model="discountType" :options="[{ v: 'percent', l: '%' }, { v: 'amount', l: '₫' }]" option-label="l"
+          option-value="v" aria-label="Loại giảm giá" />
+        <InputNumber v-model="discountValue" class="min-w-0" fluid :min="0"
+          :max="discountType === 'percent' ? 100 : undefined" :max-fraction-digits="0" locale="vi-VN" placeholder="0"
+          aria-label="Giá trị giảm giá" />
       </div>
 
+      <Message v-if="needVariant" severity="warn" size="small">{{ needVariant }}</Message>
       <Message v-if="previewError" severity="error" size="small">{{ previewError }}</Message>
-      <dl v-if="preview" class="sum">
-        <div><dt>Tạm tính</dt><dd>{{ vnd(preview.subtotalVnd) }}</dd></div>
-        <div v-if="preview.discountVnd"><dt>Giảm giá</dt><dd>−{{ vnd(preview.discountVnd) }}</dd></div>
-        <div v-if="taxHint"><dt>{{ taxHint }}</dt><dd>{{ vnd(preview.taxVnd) }}</dd></div>
-        <div class="grand"><dt>Tổng cộng</dt><dd>{{ vnd(preview.totalVnd) }}</dd></div>
+      <dl v-if="preview" class="m-0 flex flex-col gap-1.5 text-sm">
+        <div class="flex justify-between">
+          <dt>Tạm tính</dt>
+          <dd class="m-0">{{ vnd(preview.subtotalVnd) }}</dd>
+        </div>
+        <div v-if="preview.discountVnd" class="flex justify-between">
+          <dt>Giảm giá</dt>
+          <dd class="m-0">−{{ vnd(preview.discountVnd) }}</dd>
+        </div>
+        <div v-if="taxHint" class="flex justify-between">
+          <dt>{{ taxHint }}</dt>
+          <dd class="m-0">{{ vnd(preview.taxVnd) }}</dd>
+        </div>
+        <div class="flex justify-between border-t border-line pt-2 text-lg font-bold">
+          <dt>Tổng cộng</dt>
+          <dd class="m-0">{{ vnd(preview.totalVnd) }}</dd>
+        </div>
       </dl>
-      <Button v-if="tableId" label="Gửi bếp" icon="pi pi-send" size="large" fluid severity="secondary" :loading="sending" :disabled="!preview" @click="sendToKitchen" />
-      <Button label="Thanh toán" icon="pi pi-wallet" size="large" fluid :disabled="!preview || sending" @click="openPay" />
+      <Button v-if="tableId" label="Gửi bếp" icon="pi pi-send" size="large" fluid severity="secondary" raised
+        :loading="sending" :disabled="!preview || !!needVariant" @click="sendToKitchen" />
+      <Button label="Thanh toán" icon="pi pi-wallet" size="large" fluid raised
+        :disabled="!preview || sending || !!needVariant" @click="openPay" />
     </aside>
 
-    <Dialog :visible="!!variantFor" modal :header="variantFor?.name" :style="{ width: '22rem' }" @update:visible="variantFor = null">
-      <div class="variants">
-        <Button v-for="v in variantFor?.variants" :key="v.id" :label="`${v.name} · ${vnd(v.priceVnd)}`" severity="secondary" outlined fluid @click="chooseVariant(v)" />
-      </div>
-    </Dialog>
-
-    <Dialog v-model:visible="payOpen" modal header="Thanh toán" :style="{ width: '26rem' }">
-      <div class="pay">
-        <div class="due"><span>Cần thu</span><strong>{{ vnd(total) }}</strong></div>
-        <label>Tiền mặt khách đưa
+    <Dialog v-model:visible="payOpen" modal header="Thanh toán" :style="{ width: 'min(26rem, calc(100vw - 1.5rem))' }">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-baseline justify-between"><span>Cần thu</span><strong class="text-xl">{{ vnd(total)
+        }}</strong></div>
+        <label class="field">Tiền mặt khách đưa
           <InputNumber v-model="cash" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid />
         </label>
-        <div class="quick">
-          <Button label="Đủ" size="small" severity="secondary" outlined @click="cash = total; transfer = 0" />
-          <Button v-for="q in quick" :key="q" :label="vnd(q)" size="small" severity="secondary" outlined @click="cash = q" />
+        <div class="flex flex-wrap gap-1.5">
+          <Button label="Đủ" size="small" severity="secondary" outlined raised @click="cash = total; transfer = 0" />
+          <Button v-for="q in quick" :key="q" :label="vnd(q)" size="small" severity="secondary" outlined raised
+            @click="cash = q" />
         </div>
-        <label>Chuyển khoản
+        <label class="field">Chuyển khoản
           <InputNumber v-model="transfer" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid />
         </label>
-        <Button label="Thu đủ bằng chuyển khoản" size="small" severity="secondary" text @click="transfer = total; cash = 0" />
+        <Button label="Thu đủ bằng chuyển khoản" size="small" severity="secondary" raised
+          @click="transfer = total; cash = 0" />
         <Message v-if="payError" severity="warn" size="small">{{ payError }}</Message>
-        <div v-else class="due"><span>Tiền thừa trả khách</span><strong>{{ vnd(Math.max(0, change)) }}</strong></div>
-        <Button label="Xác nhận thu tiền" :loading="paying" :disabled="!!payError" fluid @click="confirmPay" />
+        <div v-else class="flex items-baseline justify-between"><span>Tiền thừa trả khách</span><strong
+            class="text-xl">{{
+              vnd(Math.max(0, change)) }}</strong></div>
+        <Button label="Xác nhận thu tiền" raised :loading="paying" :disabled="!!payError" fluid @click="confirmPay" />
       </div>
     </Dialog>
   </div>
 </template>
-
-<style scoped>
-.pos { display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; align-items: start; }
-.err { color: var(--p-red-600); }
-.muted { color: var(--p-text-muted-color); margin: 0.5rem 0; }
-.bar { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
-.cats { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.cats button { border: 1px solid var(--p-content-border-color); background: var(--p-surface-0); border-radius: 999px; padding: 0.35rem 0.9rem; font: inherit; font-size: 0.85rem; cursor: pointer; }
-.cats button.on { background: var(--p-primary-color); border-color: var(--p-primary-color); color: var(--p-primary-contrast-color); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.75rem; }
-.tile { display: flex; flex-direction: column; gap: 0.35rem; text-align: left; min-height: 84px; padding: 0.85rem; border: 1px solid var(--p-content-border-color); border-radius: 10px; background: var(--p-surface-0); font: inherit; cursor: pointer; }
-.tile:hover { border-color: var(--p-primary-color); }
-.tile span, .tile small { color: var(--p-text-muted-color); font-size: 0.85rem; }
-.banner { margin: 0; background: var(--p-primary-50); color: var(--p-primary-700); border-radius: 8px; padding: 0.4rem 0.7rem; font-weight: 600; }
-.customer { display: flex; flex-direction: column; gap: 0.35rem; }
-.customer > span { display: flex; align-items: center; justify-content: space-between; }
-.hit { text-align: left; border: 0; background: var(--p-surface-100); border-radius: 8px; padding: 0.4rem 0.6rem; font: inherit; cursor: pointer; }
-.cart { position: sticky; top: 1.5rem; background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 12px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.9rem; }
-.cart ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; max-height: 40vh; overflow-y: auto; }
-.cart li { display: grid; grid-template-columns: 1fr auto auto; gap: 0.5rem; align-items: center; font-size: 0.9rem; }
-.name { display: flex; flex-direction: column; }
-.name small { color: var(--p-text-muted-color); }
-.qty { display: flex; align-items: center; gap: 0.1rem; }
-.qty span { min-width: 1.4rem; text-align: center; }
-.discount { display: grid; grid-template-columns: auto 5rem 1fr; gap: 0.5rem; align-items: center; font-size: 0.9rem; }
-.sum { margin: 0; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; }
-.sum div { display: flex; justify-content: space-between; }
-.sum dd { margin: 0; }
-.sum .grand { font-size: 1.15rem; font-weight: 700; padding-top: 0.5rem; border-top: 1px solid var(--p-content-border-color); }
-.variants, .pay { display: flex; flex-direction: column; gap: 0.75rem; }
-.pay label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; font-weight: 500; }
-.due { display: flex; justify-content: space-between; align-items: baseline; }
-.due strong { font-size: 1.25rem; }
-.quick { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-@media (max-width: 960px) { .pos { grid-template-columns: 1fr; } .cart { position: static; } }
-</style>

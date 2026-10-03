@@ -53,6 +53,54 @@ describe('Bán hàng, F&B, bán lẻ, khách, hoàn tiền và tồn kho', () =>
     expect(summary).toMatchObject({ todayRevenueVnd: 0, todayPaidCount: 0, openCount: 0, paidCount: 0 });
   });
 
+  it('xóa sản phẩm cùng phiên bản và công thức', async () => {
+    const product = (await http().post('/api/products').set(as(restaurant)).send({
+      name: 'Bún', priceVnd: 40000, variants: [{ name: 'Tô', priceVnd: 40000 }],
+    }).expect(201)).body;
+    await http().post('/api/fnb/recipes').set(as(restaurant)).send({
+      productId: product.id, items: [{ name: 'Bún', qty: 1, unit: 'vắt' }],
+    }).expect(201);
+    const staffLogin = (await http().post('/api/users').set(as(restaurant)).send({
+      fullName: 'Bếp', email: 'bep-del@x.vn', password: 'Password1', role: 'staff',
+    }).expect(201)).body;
+    expect(staffLogin.id).toBeTruthy();
+    const staff = (await http().post('/api/auth/login').send({ email: 'bep-del@x.vn', password: 'Password1' }).expect(201)).body.accessToken;
+    await http().delete(`/api/products/${product.id}`).set(as(staff)).expect(403);
+    await http().delete(`/api/products/${product.id}`).set(as(restaurant)).expect(200);
+    const list = (await http().get('/api/products?includeInactive=true').set(as(restaurant)).expect(200)).body;
+    expect(list.find((p: { id: string }) => p.id === product.id)).toBeUndefined();
+    const recipes = (await http().get('/api/fnb/recipes').set(as(restaurant)).expect(200)).body.recipes;
+    expect(recipes.find((r: { productId: string }) => r.productId === product.id)).toBeUndefined();
+    await http().delete(`/api/products/${product.id}`).set(as(restaurant)).expect(404);
+  });
+
+  it('món kèm cộng vào giá và ghi chú được chụp trên đơn', async () => {
+    const group = (await http().post('/api/modifier-groups').set(as(owner)).send({
+      name: 'Topping', required: true, minSelect: 1, maxSelect: 2,
+      options: [{ name: 'Trân châu', extraVnd: 5000 }, { name: 'Thạch', extraVnd: 3000 }],
+    }).expect(201)).body;
+    const product = (await http().post('/api/products').set(as(owner)).send({
+      name: 'Trà sữa', priceVnd: 30000, modifierGroupIds: [group.id],
+    }).expect(201)).body;
+    expect(product.modifierGroupIds).toEqual([group.id]);
+    const pearl = group.options.find((o: { name: string }) => o.name === 'Trân châu');
+    await http().post('/api/orders/preview').set(as(owner)).send({
+      lines: [{ productId: product.id, qty: 1 }],
+    }).expect(400);
+    const preview = (await http().post('/api/orders/preview').set(as(owner)).send({
+      lines: [{ productId: product.id, qty: 1, optionIds: [pearl.id], note: 'ít ngọt' }],
+    }).expect(201)).body;
+    expect(preview.lines[0]).toMatchObject({ name: 'Trà sữa · Trân châu', unitPriceVnd: 35000, lineTotalVnd: 35000 });
+    const order = (await http().post('/api/orders').set(as(owner)).send({
+      lines: [{ productId: product.id, qty: 1, optionIds: [pearl.id], note: 'ít ngọt' }],
+    }).expect(201)).body;
+    expect(order.lines[0]).toMatchObject({ name: 'Trà sữa · Trân châu', unitPriceVnd: 35000, note: 'ít ngọt' });
+    expect(order.lines[0].options).toEqual([{ name: 'Trân châu', extraVnd: 5000 }].map((o) => expect.objectContaining(o)));
+    await http().post('/api/orders/preview').set(as(owner)).send({
+      lines: [{ productId: product.id, qty: 1, optionIds: ['00000000-0000-4000-8000-000000000000'] }],
+    }).expect(400);
+  });
+
   it('khách hàng gắn vào đơn', async () => {
     const customer = (await http().post('/api/customers').set(as(owner)).send({ name: 'An', phone: '0901' }).expect(201)).body;
     const found = (await http().get('/api/customers?q=0901').set(as(owner)).expect(200)).body;

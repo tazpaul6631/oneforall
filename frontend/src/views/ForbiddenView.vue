@@ -1,12 +1,7 @@
 <template>
-  <div class="empty">
+  <div class="flex flex-col items-start gap-3">
     <h2>Gói hiện tại chưa có tính năng này</h2>
-    <p>Liên hệ quản trị để bật thêm tính năng cho cửa hàng của bạn.</p>
+    <p class="m-0 text-muted">Liên hệ quản trị để bật thêm tính năng cho cửa hàng của bạn.</p>
     <RouterLink to="/">Về trang tổng quan</RouterLink>
   </div>
 </template>
-
-<style scoped>
-.empty { display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start; }
-p { margin: 0; color: var(--p-text-muted-color); }
-</style>

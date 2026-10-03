@@ -207,6 +207,11 @@ export class FnbService {
     return { ...recipe, name, items };
   }
 
+  async dropForProduct(productId: string) {
+    const recipe = await this.recipes.findOne({ productId });
+    if (recipe) await this.deleteRecipe(recipe.id);
+  }
+
   async deleteRecipe(id: string) {
     const recipe = await this.recipes.findOne({ id });
     if (!recipe) throw new NotFoundException('Không tìm thấy công thức');

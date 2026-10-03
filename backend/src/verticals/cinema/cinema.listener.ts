@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { OrderEvent, RefundEvent } from '../../core/order/order.lifecycle';
+import { ProductDeletedEvent } from '../../core/product/product.service';
 import { EntitlementService } from '../../platform/entitlement/entitlement.service';
 import { CinemaService } from './cinema.service';
 
@@ -15,6 +16,11 @@ export class CinemaListener {
 
   private async run(fn: () => Promise<unknown>) {
     try { await fn(); } catch (e) { this.log.error(e); }
+  }
+
+  @OnEvent('product.deleted')
+  productDeleted(e: ProductDeletedEvent) {
+    return this.cinema.dropForProduct(e.productId);
   }
 
   @OnEvent('order.paid')

@@ -9,7 +9,7 @@ import { TenantService } from '../../platform/tenant/tenant.service';
 import { CustomerService } from '../customer/customer.service';
 import { ProductService } from '../product/product.service';
 import { CreateOrderDto, MergeOrderDto, PayOrderDto, PreviewOrderDto, RefundDto, SplitOrderDto } from './order.dto';
-import { Order, OrderLine, OrderStatus, Payment, Refund, RefundLine } from './order.entity';
+import { Order, OrderLine, OrderLineOption, OrderStatus, Payment, Refund, RefundLine } from './order.entity';
 import { MoneyError, calcTotals, lineRefundVnd, settlePayments } from './money';
 
 function startOfTodayVietnam(now = new Date()): Date {
@@ -29,6 +29,7 @@ export class OrderService {
   private payments: TenantRepository<Payment>;
   private refunds: TenantRepository<Refund>;
   private refundLines: TenantRepository<RefundLine>;
+  private lineOptions: TenantRepository<OrderLineOption>;
 
   constructor(
     @InjectRepository(Order) o: Repository<Order>,
@@ -36,6 +37,7 @@ export class OrderService {
     @InjectRepository(Payment) p: Repository<Payment>,
     @InjectRepository(Refund) r: Repository<Refund>,
     @InjectRepository(RefundLine) rl: Repository<RefundLine>,
+    @InjectRepository(OrderLineOption) opts: Repository<OrderLineOption>,
     private readonly ds: DataSource,
     private readonly cls: ClsService,
     private readonly products: ProductService,
@@ -48,6 +50,7 @@ export class OrderService {
     this.payments = new TenantRepository(p, cls);
     this.refunds = new TenantRepository(r, cls);
     this.refundLines = new TenantRepository(rl, cls);
+    this.lineOptions = new TenantRepository(opts, cls);
   }
 
   private get tenantId(): string {
@@ -107,7 +110,16 @@ export class OrderService {
         }),
       );
       const lineRepo = m.getRepository(OrderLine);
-      await lineRepo.save(items.map((i) => lineRepo.create({ tenantId, orderId: order.id, ...i })));
+      const saved = await lineRepo.save(items.map((i) => lineRepo.create({
+        tenantId, orderId: order.id,
+        productId: i.productId, variantId: i.variantId, name: i.name,
+        unitPriceVnd: i.unitPriceVnd, qty: i.qty, lineTotalVnd: i.lineTotalVnd, note: i.note,
+      })));
+      const optRepo = m.getRepository(OrderLineOption);
+      const snapshots = saved.flatMap((line, idx) => items[idx].options.map((o) => optRepo.create({
+        tenantId, orderLineId: line.id, name: o.name, extraVnd: o.extraVnd,
+      })));
+      if (snapshots.length) await optRepo.save(snapshots);
       return order.id;
     });
     await this.events.emitAsync('order.created', { tenantId, orderId: id });
@@ -150,12 +162,14 @@ export class OrderService {
       this.payments.find({ orderId: id }, { order: { createdAt: 'ASC' } }),
       this.refunds.find({ orderId: id }, { order: { createdAt: 'ASC' } }),
     ]);
+    const lineIds = lines.map((l) => l.id);
+    const optionRows = lineIds.length ? await this.lineOptions.find({ orderLineId: In(lineIds) }) : [];
     const refundIds = refundRows.map((r) => r.id);
     const refundLineRows = refundIds.length ? await this.refundLines.find({ refundId: In(refundIds) }) : [];
     const customer = order.customerId ? await this.customers.getOptional(order.customerId) : null;
     return {
       ...order,
-      lines,
+      lines: lines.map((l) => ({ ...l, options: optionRows.filter((o) => o.orderLineId === l.id) })),
       payments,
       customer: customer ? { id: customer.id, name: customer.name, phone: customer.phone } : null,
       refunds: refundRows.map((r) => ({ ...r, lines: refundLineRows.filter((l) => l.refundId === r.id) })),
@@ -343,7 +357,7 @@ export class OrderService {
           line.orderId = created.id;
           await lineRepo.save(line);
         } else {
-          await lineRepo.save(lineRepo.create({
+          const copied = await lineRepo.save(lineRepo.create({
             tenantId,
             orderId: created.id,
             productId: line.productId,
@@ -352,7 +366,15 @@ export class OrderService {
             unitPriceVnd: line.unitPriceVnd,
             qty: p.qty,
             lineTotalVnd: line.unitPriceVnd * p.qty,
+            note: line.note,
           }));
+          const optRepo = m.getRepository(OrderLineOption);
+          const opts = await optRepo.find({ where: { tenantId, orderLineId: line.id } });
+          if (opts.length) {
+            await optRepo.save(opts.map((o) => optRepo.create({
+              tenantId, orderLineId: copied.id, name: o.name, extraVnd: o.extraVnd,
+            })));
+          }
           line.qty -= p.qty;
           line.lineTotalVnd = line.unitPriceVnd * line.qty;
           await lineRepo.save(line);

@@ -40,6 +40,17 @@ export class OrderLine {
   @Column({ type: 'integer' }) qty: number;
   @Column({ type: 'integer', default: 0 }) refundedQty: number;
   @Column({ type: 'integer' }) lineTotalVnd: number;
+  @Column({ type: 'varchar', nullable: true }) note: string | null;
+}
+
+/** Chụp món kèm lúc bán. Không trỏ về danh mục, nên xóa topping sau này không làm mất đơn. */
+@Entity('order_line_options')
+export class OrderLineOption {
+  @PrimaryGeneratedColumn('uuid') id: string;
+  @Index() @Column() tenantId: string;
+  @Index() @Column() orderLineId: string;
+  @Column() name: string;
+  @Column({ type: 'integer' }) extraVnd: number;
 }
 
 /** Hoàn tiền đơn đã thu. Không xóa đơn, không đổi trạng thái paid. */

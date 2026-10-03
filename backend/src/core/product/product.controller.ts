@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { AuthUser, assertRole } from '../../platform/access/auth-user';
 import { CurrentUser, RequireFeature } from '../../platform/access/decorators';
-import { CreateCategoryDto, CreateProductDto, UpdateCategoryDto, UpdateProductDto } from './product.dto';
+import { CreateCategoryDto, CreateProductDto, ModifierGroupDto, UpdateCategoryDto, UpdateProductDto } from './product.dto';
 import { ProductService } from './product.service';
 
 @Controller()
@@ -42,5 +42,31 @@ export class ProductController {
   update(@CurrentUser() u: AuthUser, @Param('id') id: string, @Body() dto: UpdateProductDto) {
     assertRole(u, 'owner', 'manager');
     return this.svc.update(id, dto);
+  }
+
+  @Delete('products/:id')
+  remove(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    assertRole(u, 'owner', 'manager');
+    return this.svc.delete(id);
+  }
+
+  @Get('modifier-groups') groups() { return this.svc.listGroups(); }
+
+  @Post('modifier-groups')
+  createGroup(@CurrentUser() u: AuthUser, @Body() dto: ModifierGroupDto) {
+    assertRole(u, 'owner', 'manager');
+    return this.svc.createGroup(dto);
+  }
+
+  @Patch('modifier-groups/:id')
+  updateGroup(@CurrentUser() u: AuthUser, @Param('id') id: string, @Body() dto: ModifierGroupDto) {
+    assertRole(u, 'owner', 'manager');
+    return this.svc.updateGroup(id, dto);
+  }
+
+  @Delete('modifier-groups/:id')
+  deleteGroup(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    assertRole(u, 'owner', 'manager');
+    return this.svc.deleteGroup(id);
   }
 }

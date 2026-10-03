@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
+import FloatLabel from 'primevue/floatlabel';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import { useToast } from 'primevue/usetoast';
@@ -65,58 +66,69 @@ function addShow() {
 </script>
 
 <template>
-  <h2>Lịch chiếu</h2>
-  <p class="lead">Phim dùng giá trong danh mục sản phẩm. Ghế VIP lấy giá phiên bản VIP.</p>
+  <h2 class="mb-1">Lịch chiếu</h2>
+  <p class="text-muted">Phim dùng giá trong danh mục sản phẩm. Ghế VIP lấy giá phiên bản VIP.</p>
 
-  <div v-if="canEdit" class="forms">
-    <form class="card" @submit.prevent="addMovie">
+  <div v-if="canEdit" class="my-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <form class="panel flex flex-col gap-2 p-3.5" @submit.prevent="addMovie">
       <h3>Phim</h3>
-      <InputText v-model="movie.title" placeholder="Tên phim" aria-label="Tên phim" fluid />
-      <label>Thời lượng (phút)<InputNumber v-model="movie.durationMin" :min="1" :max="400" fluid /></label>
-      <label>Giá vé<InputNumber v-model="movie.priceVnd" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid /></label>
-      <label>Giá VIP (bỏ trống nếu không có)<InputNumber v-model="movie.vipPriceVnd" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid /></label>
-      <Button type="submit" label="Thêm phim" :disabled="!movie.title.trim()" />
+      <FloatLabel variant="on">
+        <InputText id="movie-title" v-model="movie.title" fluid />
+        <label for="movie-title">Tên phim</label>
+      </FloatLabel>
+      <label class="field">Thời lượng (phút)
+        <InputNumber v-model="movie.durationMin" :min="1" :max="400" fluid />
+      </label>
+      <label class="field">Giá vé
+        <InputNumber v-model="movie.priceVnd" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid />
+      </label>
+      <label class="field">Giá VIP (bỏ trống nếu không có)
+        <InputNumber v-model="movie.vipPriceVnd" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid />
+      </label>
+      <Button type="submit" raised label="Thêm phim" :disabled="!movie.title.trim()" />
     </form>
-    <form class="card" @submit.prevent="addRoom">
+    <form class="panel flex flex-col gap-2 p-3.5" @submit.prevent="addRoom">
       <h3>Phòng</h3>
-      <InputText v-model="room.name" placeholder="Tên phòng" aria-label="Tên phòng" fluid />
-      <label>Số hàng<InputNumber v-model="room.rows" :min="1" :max="12" fluid /></label>
-      <label>Ghế mỗi hàng<InputNumber v-model="room.cols" :min="1" :max="16" fluid /></label>
-      <label>Hàng VIP cuối phòng<InputNumber v-model="room.vipRows" :min="0" :max="12" fluid /></label>
-      <Button type="submit" label="Thêm phòng" :disabled="!room.name.trim()" />
+      <FloatLabel variant="on">
+        <InputText id="room-name" v-model="room.name" fluid />
+        <label for="room-name">Tên phòng</label>
+      </FloatLabel>
+      <label class="field">Số hàng
+        <InputNumber v-model="room.rows" :min="1" :max="12" fluid />
+      </label>
+      <label class="field">Ghế mỗi hàng
+        <InputNumber v-model="room.cols" :min="1" :max="16" fluid />
+      </label>
+      <label class="field">Hàng VIP cuối phòng
+        <InputNumber v-model="room.vipRows" :min="0" :max="12" fluid />
+      </label>
+      <Button type="submit" raised label="Thêm phòng" :disabled="!room.name.trim()" />
     </form>
-    <form class="card" @submit.prevent="addShow">
+    <form class="panel flex flex-col gap-2 p-3.5" @submit.prevent="addShow">
       <h3>Suất chiếu</h3>
-      <Select v-model="show.movieId" :options="movies" option-label="title" option-value="id" placeholder="Chọn phim" fluid />
-      <Select v-model="show.roomId" :options="rooms" option-label="name" option-value="id" placeholder="Chọn phòng" fluid />
-      <label>Giờ chiếu<input v-model="show.startsAt" type="datetime-local" aria-label="Giờ chiếu" /></label>
-      <Button type="submit" label="Thêm suất" :disabled="!show.movieId || !show.roomId || !show.startsAt" />
+      <Select v-model="show.movieId" :options="movies" option-label="title" option-value="id" placeholder="Chọn phim"
+        fluid />
+      <Select v-model="show.roomId" :options="rooms" option-label="name" option-value="id" placeholder="Chọn phòng"
+        fluid />
+      <label class="field">Giờ chiếu<input v-model="show.startsAt"
+          class="rounded-md border border-line px-2.5 py-2 font-[inherit]" type="datetime-local"
+          aria-label="Giờ chiếu" /></label>
+      <Button type="submit" raised label="Thêm suất" :disabled="!show.movieId || !show.roomId || !show.startsAt" />
     </form>
   </div>
 
-  <ul class="shows">
-    <li v-for="s in shows" :key="s.id">
+  <ul class="m-0 flex list-none flex-col gap-2 p-0">
+    <li v-for="s in shows" :key="s.id"
+      class="panel grid grid-cols-1 items-center gap-1 px-3.5 py-3 md:grid-cols-[1.2fr_1.4fr_auto] md:gap-3">
       <strong>{{ s.movieTitle }}</strong>
       <span>{{ dateTime(s.startsAt) }} · {{ s.roomName }}</span>
       <span>{{ s.sold }}/{{ s.seats }} ghế đã bán</span>
     </li>
   </ul>
-  <p v-if="!shows.length" class="muted">Chưa có suất chiếu.</p>
-  <p v-if="movies.length" class="muted">
-    <span v-for="m in movies" :key="m.id">{{ m.title }} · {{ vnd(m.priceVnd) }}<template v-if="m.vipPriceVnd != null"> / VIP {{ vnd(m.vipPriceVnd) }}</template>. </span>
+  <p v-if="!shows.length" class="text-muted">Chưa có suất chiếu.</p>
+  <p v-if="movies.length" class="text-muted">
+    <span v-for="m in movies" :key="m.id">{{ m.title }} · {{ vnd(m.priceVnd) }}<template v-if="m.vipPriceVnd != null"> /
+        VIP {{ vnd(m.vipPriceVnd) }}</template>.
+    </span>
   </p>
 </template>
-
-<style scoped>
-h2 { margin-bottom: 0.35rem; }
-.lead, .muted { color: var(--p-text-muted-color); }
-.forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
-.card, .card label { display: flex; flex-direction: column; gap: 0.5rem; }
-.card { background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 12px; padding: 0.9rem; }
-.card h3 { margin: 0; font-size: 1rem; }
-.card label { font-size: 0.85rem; font-weight: 500; }
-input[type='datetime-local'] { font: inherit; padding: 0.45rem 0.6rem; border: 1px solid var(--p-content-border-color); border-radius: 6px; }
-.shows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
-.shows li { display: grid; grid-template-columns: 1.2fr 1.4fr auto; gap: 0.75rem; align-items: center; background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 10px; padding: 0.7rem 0.9rem; }
-@media (max-width: 700px) { .shows li { grid-template-columns: 1fr; } }
-</style>

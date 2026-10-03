@@ -40,34 +40,21 @@ onUnmounted(() => clearInterval(timer));
 </script>
 
 <template>
-  <h2>Màn hình bếp</h2>
-  <p class="lead">Phiếu được tạo khi có đơn mới. Thanh toán hoặc hủy đơn sẽ đưa phiếu ra khỏi hàng chờ.</p>
-  <p v-if="loadError" class="err">{{ loadError }}</p>
-  <p v-else-if="!tickets.length" class="muted">Chưa có món nào chờ làm.</p>
-  <div class="board">
-    <article v-for="t in tickets" :key="t.id" :class="t.status">
-      <header>
+  <h2 class="mb-1">Màn hình bếp</h2>
+  <p class="mb-4 text-muted">Phiếu được tạo khi có đơn mới. Thanh toán hoặc hủy đơn sẽ đưa phiếu ra khỏi hàng chờ.</p>
+  <p v-if="loadError" class="text-danger">{{ loadError }}</p>
+  <p v-else-if="!tickets.length" class="mb-4 text-muted">Chưa có món nào chờ làm.</p>
+  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <article v-for="t in tickets" :key="t.id" class="panel flex flex-col gap-2.5 p-3.5"
+      :class="{ 'border-warn': t.status === 'cooking', 'border-ok': t.status === 'ready' }">
+      <header class="flex items-center justify-between gap-2">
         <strong>Đơn {{ orderCode(t.seq) }}</strong>
-        <span>{{ label[t.status] }}</span>
+        <span class="text-sm text-muted">{{ label[t.status] }}</span>
       </header>
-      <ul>
-        <li v-for="l in t.lines" :key="l.id"><b>{{ l.qty }}</b> {{ l.name }}</li>
+      <ul class="m-0 flex list-none flex-col gap-1 p-0">
+        <li v-for="l in t.lines" :key="l.id"><b class="inline-block min-w-6">{{ l.qty }}</b> {{ l.name }}</li>
       </ul>
-      <Button v-if="next[t.status]" :label="nextLabel[t.status]" @click="advance(t)" />
+      <Button v-if="next[t.status]" raised :label="nextLabel[t.status]" @click="advance(t)" />
     </article>
   </div>
 </template>
-
-<style scoped>
-h2 { margin-bottom: 0.35rem; }
-.lead, .muted { color: var(--p-text-muted-color); margin: 0 0 1rem; }
-.err { color: var(--p-red-600); }
-.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
-article { background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 12px; padding: 0.9rem; display: flex; flex-direction: column; gap: 0.6rem; }
-article.cooking { border-color: var(--p-orange-400); }
-article.ready { border-color: var(--p-green-500); }
-header { display: flex; justify-content: space-between; gap: 0.5rem; }
-header span { color: var(--p-text-muted-color); font-size: 0.85rem; }
-ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; }
-li b { display: inline-block; min-width: 1.4rem; }
-</style>

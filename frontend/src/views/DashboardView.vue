@@ -55,49 +55,36 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="session.boot" class="wrap">
+  <div v-if="session.boot" class="flex flex-col gap-5">
     <h2>Xin chào, {{ session.boot.user.name }}</h2>
-    <p class="lead">
+    <p class="m-0 max-w-[60ch] leading-relaxed text-muted">
       {{ session.boot.tenant.name }} đang dùng gói <strong>{{ session.boot.tenant.presetLabel }}</strong>.
     </p>
 
-    <p v-if="loadError" class="err">{{ loadError }}</p>
-    <section v-else class="stats">
-      <article v-for="c in cards" :key="c.label">
-        <span>{{ c.label }}</span>
-        <strong>{{ c.value }}</strong>
+    <p v-if="loadError" class="text-danger">{{ loadError }}</p>
+    <section v-else class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <article v-for="c in cards" :key="c.label" class="panel flex flex-col gap-1.5 px-4 py-3.5">
+        <span class="text-sm text-muted">{{ c.label }}</span>
+        <strong class="text-lg sm:text-xl">{{ c.value }}</strong>
       </article>
     </section>
 
-    <section v-if="canAudit && audit.length" class="group">
+    <section v-if="canAudit && audit.length" class="panel flex flex-col gap-3 p-4 sm:px-5">
       <h3>Hoạt động gần đây</h3>
-      <ul>
-        <li v-for="a in audit" :key="a.id">
+      <ul class="m-0 flex list-none flex-col gap-2 p-0">
+        <li v-for="a in audit" :key="a.id"
+          class="flex flex-col gap-0.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <span>{{ actionLabel[a.action] ?? a.action }}</span>
-          <small>{{ dateTime(a.createdAt) }}</small>
+          <small class="text-muted">{{ dateTime(a.createdAt) }}</small>
         </li>
       </ul>
     </section>
 
-    <section v-for="[g, list] in groups" :key="g" class="group">
+    <section v-for="[g, list] in groups" :key="g" class="panel flex flex-col gap-3 p-4 sm:px-5">
       <h3>{{ groupLabel[g] ?? g }}</h3>
-      <div class="tags"><Tag v-for="f in list" :key="f" :value="f" severity="secondary" /></div>
+      <div class="flex flex-wrap gap-1.5">
+        <Tag v-for="f in list" :key="f" :value="f" severity="secondary" />
+      </div>
     </section>
   </div>
 </template>
-
-<style scoped>
-.wrap { display: flex; flex-direction: column; gap: 1.25rem; }
-.lead { margin: 0; max-width: 60ch; line-height: 1.6; color: var(--p-text-muted-color); }
-.err { color: var(--p-red-600); }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; }
-.stats article { background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 10px; padding: 0.9rem 1rem; display: flex; flex-direction: column; gap: 0.35rem; }
-.stats span { color: var(--p-text-muted-color); font-size: 0.85rem; }
-.stats strong { font-size: 1.25rem; }
-.group { background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 10px; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
-.group h3 { font-size: 0.95rem; }
-.group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
-.group li { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.9rem; }
-.group small { color: var(--p-text-muted-color); }
-.tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-</style>

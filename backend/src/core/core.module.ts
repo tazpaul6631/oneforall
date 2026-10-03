@@ -24,11 +24,11 @@ import { StockController } from './inventory/stock.controller';
 import { StockLevel, StockMove } from './inventory/stock.entity';
 import { StockService } from './inventory/stock.service';
 import { OrderController } from './order/order.controller';
-import { Order, OrderLine, Payment, Refund, RefundLine } from './order/order.entity';
+import { Order, OrderLine, OrderLineOption, Payment, Refund, RefundLine } from './order/order.entity';
 import { OrderLifecycleListener } from './order/order.lifecycle';
 import { OrderService } from './order/order.service';
 import { ProductController } from './product/product.controller';
-import { Category, Product, ProductVariant } from './product/product.entity';
+import { Category, ModifierGroup, ModifierOption, Product, ProductModifierGroup, ProductVariant } from './product/product.entity';
 import { ProductService } from './product/product.service';
 
 @Module({
@@ -36,7 +36,8 @@ import { ProductService } from './product/product.service';
     PassportModule,
     JwtModule.register({ secret: jwtSecret(), signOptions: { expiresIn: '12h' } }),
     TypeOrmModule.forFeature([
-      User, Operator, Category, Product, ProductVariant, Order, OrderLine, Payment, Refund, RefundLine,
+      User, Operator, Category, Product, ProductVariant, ModifierGroup, ModifierOption, ProductModifierGroup,
+      Order, OrderLine, OrderLineOption, Payment, Refund, RefundLine,
       Customer, StockLevel, StockMove, AuditLog,
     ]),
   ],

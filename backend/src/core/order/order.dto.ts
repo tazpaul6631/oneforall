@@ -5,6 +5,8 @@ export class OrderLineDto {
   @IsUUID() productId: string;
   @IsOptional() @IsUUID() variantId?: string;
   @IsInt() @Min(1) @Max(999) qty: number;
+  @IsOptional() @IsArray() @ArrayMaxSize(20) @IsUUID('all', { each: true }) optionIds?: string[];
+  @IsOptional() @IsString() @MaxLength(200) note?: string;
 }
 
 export class DiscountDto {

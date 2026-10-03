@@ -50,22 +50,43 @@ if (localPropsFile.exists()) {
     localPropsFile.withReader('UTF-8') { reader -> localProps.load(reader) }
 }
 def sdkDir = localProps.getProperty('sdk.dir')
+def adb = sdkDir ? new File(sdkDir, 'platform-tools' + File.separator + 'adb.exe') : null
+if (adb != null && !adb.exists()) adb = new File(sdkDir, 'platform-tools' + File.separator + 'adb')
+
+tasks.register('reverseApi') {
+    group = 'install'
+    description = 'Chuyển cổng 3000 của mọi máy Android đang cắm về máy tính'
+    doLast {
+        if (adb == null || !adb.exists()) {
+            logger.warn('Không thấy adb, bỏ qua chuyển cổng 3000')
+            return
+        }
+        def listed = new ByteArrayOutputStream()
+        exec {
+            commandLine adb.absolutePath, 'devices'
+            standardOutput = listed
+            ignoreExitValue true
+        }
+        def serials = listed.toString('UTF-8').readLines().drop(1).collect { it.trim() }
+            .findAll { it.endsWith('device') }
+            .collect { it.split(/\s+/)[0] }
+        if (!serials) {
+            logger.warn('Không có máy Android nào đang cắm')
+            return
+        }
+        serials.each { serial ->
+            exec {
+                commandLine adb.absolutePath, '-s', serial, 'reverse', 'tcp:3000', 'tcp:3000'
+                ignoreExitValue true
+            }
+            logger.lifecycle("Đã chuyển cổng 3000 cho ${serial}")
+        }
+    }
+}
 
 afterEvaluate {
     tasks.matching { it.name == 'installDebug' }.configureEach { task ->
-        task.doLast {
-            if (!sdkDir) return
-            def adb = new File(sdkDir, 'platform-tools' + File.separator + 'adb.exe')
-            if (!adb.exists()) adb = new File(sdkDir, 'platform-tools' + File.separator + 'adb')
-            if (!adb.exists()) {
-                logger.warn('Không thấy adb, bỏ qua chuyển cổng 3000')
-                return
-            }
-            exec {
-                commandLine adb.absolutePath, 'reverse', 'tcp:3000', 'tcp:3000'
-                ignoreExitValue true
-            }
-        }
+        task.finalizedBy 'reverseApi'
     }
 }
 

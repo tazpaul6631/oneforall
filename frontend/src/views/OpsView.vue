@@ -78,63 +78,89 @@ onMounted(load);
 </script>
 
 <template>
-  <div class="page">
-    <header>
+  <div class="mx-auto w-full max-w-6xl p-4 md:p-8">
+    <header class="page-head">
       <div>
         <h1>Cửa hàng</h1>
-        <p>{{ session.operator?.email }}</p>
+        <p class="m-0 text-muted">{{ session.operator?.email }}</p>
       </div>
-      <Button label="Đăng xuất" severity="secondary" outlined @click="session.logout()" />
+      <Button label="Đăng xuất" severity="secondary" outlined raised @click="session.logout()" />
     </header>
 
     <Message v-if="error" severity="error">{{ error }}</Message>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Cửa hàng</th>
-          <th>Gói</th>
-          <th>Chủ quán</th>
-          <th>Trạng thái</th>
-          <th>Dùng đến</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="shop in shops" :key="shop.id">
-          <td>{{ shop.name }}</td>
-          <td>{{ shop.presetLabel }}</td>
-          <td>{{ shop.ownerEmail }}</td>
-          <td>{{ label[shop.status] }}</td>
-          <td>{{ until(shop.activeUntil) }}</td>
-          <td class="actions">
-            <Button size="small" :label="actionLabel(shop.status)" :loading="busy === shop.id + 'grant'" @click="grant(shop)" />
-            <Button v-if="shop.status === 'active' || shop.status === 'expired'" size="small" severity="danger" outlined label="Khóa" :loading="busy === shop.id + 'suspend'" @click="suspend(shop)" />
-            <Button size="small" severity="secondary" outlined label="Đặt lại mật khẩu" @click="resetId = shop.id; resetPassword = ''" />
-            <form v-if="resetId === shop.id" class="reset" @submit.prevent="resetPassword.length >= 8 && reset(shop)">
-              <label :for="`pw-${shop.id}`">Mật khẩu mới</label>
-              <Password :input-id="`pw-${shop.id}`" v-model="resetPassword" :feedback="false" toggle-mask />
-              <Button type="submit" size="small" label="Lưu" :disabled="resetPassword.length < 8" :loading="busy === shop.id + 'reset'" />
-            </form>
-          </td>
-        </tr>
-        <tr v-if="shops.length === 0">
-          <td colspan="6">Chưa có cửa hàng nào.</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
+      <article v-for="shop in shops" :key="shop.id" class="panel flex flex-col gap-2 p-3">
+        <div class="flex items-start justify-between gap-2">
+          <strong>{{ shop.name }}</strong>
+          <span class="shrink-0 text-sm text-muted">{{ label[shop.status] }}</span>
+        </div>
+        <p class="m-0 text-sm text-muted">{{ shop.presetLabel }} · {{ shop.ownerEmail }}</p>
+        <p class="m-0 text-sm">Dùng đến {{ until(shop.activeUntil) }}</p>
+        <div class="flex flex-wrap gap-1.5">
+          <Button size="small" raised :label="actionLabel(shop.status)" :loading="busy === shop.id + 'grant'"
+            @click="grant(shop)" />
+          <Button v-if="shop.status === 'active' || shop.status === 'expired'" size="small" severity="danger" outlined
+            raised label="Khóa" :loading="busy === shop.id + 'suspend'" @click="suspend(shop)" />
+          <Button size="small" severity="secondary" outlined raised label="Đặt lại mật khẩu"
+            @click="resetId = shop.id; resetPassword = ''" />
+        </div>
+        <form v-if="resetId === shop.id" class="flex flex-col gap-2 sm:flex-row sm:items-center"
+          @submit.prevent="resetPassword.length >= 8 && reset(shop)">
+          <label class="sr-only" :for="`pw-card-${shop.id}`">Mật khẩu mới</label>
+          <Password :input-id="`pw-card-${shop.id}`" v-model="resetPassword" :feedback="false" toggle-mask />
+          <Button type="submit" raised size="small" label="Lưu" :disabled="resetPassword.length < 8"
+            :loading="busy === shop.id + 'reset'" />
+        </form>
+      </article>
+      <p v-if="shops.length === 0" class="m-0 text-muted md:col-span-2">Chưa có cửa hàng nào.</p>
+    </div>
+
+    <div class="panel hidden overflow-x-auto lg:block">
+      <table class="w-full border-collapse">
+        <thead>
+          <tr>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-muted">Cửa hàng</th>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-muted">Gói</th>
+            <th class="hidden px-3 py-3 text-left text-xs font-semibold text-muted lg:table-cell">Chủ quán</th>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-muted">Trạng thái</th>
+            <th class="px-3 py-3 text-left text-xs font-semibold text-muted">Dùng đến</th>
+            <th class="px-3 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="shop in shops" :key="shop.id" class="border-t border-line align-top">
+            <td class="px-3 py-3">
+              <div>{{ shop.name }}</div>
+              <div class="mt-0.5 text-sm text-muted lg:hidden">{{ shop.ownerEmail }}</div>
+            </td>
+            <td class="px-3 py-3">{{ shop.presetLabel }}</td>
+            <td class="hidden px-3 py-3 lg:table-cell">{{ shop.ownerEmail }}</td>
+            <td class="px-3 py-3">{{ label[shop.status] }}</td>
+            <td class="px-3 py-3 whitespace-nowrap">{{ until(shop.activeUntil) }}</td>
+            <td class="px-3 py-3">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <Button size="small" raised :label="actionLabel(shop.status)" :loading="busy === shop.id + 'grant'"
+                  @click="grant(shop)" />
+                <Button v-if="shop.status === 'active' || shop.status === 'expired'" size="small" severity="danger"
+                  outlined raised label="Khóa" :loading="busy === shop.id + 'suspend'" @click="suspend(shop)" />
+                <Button size="small" severity="secondary" outlined raised label="Đặt lại mật khẩu"
+                  @click="resetId = shop.id; resetPassword = ''" />
+                <form v-if="resetId === shop.id" class="flex flex-wrap items-center gap-1.5"
+                  @submit.prevent="resetPassword.length >= 8 && reset(shop)">
+                  <label class="sr-only" :for="`pw-${shop.id}`">Mật khẩu mới</label>
+                  <Password :input-id="`pw-${shop.id}`" v-model="resetPassword" :feedback="false" toggle-mask />
+                  <Button type="submit" raised size="small" label="Lưu" :disabled="resetPassword.length < 8"
+                    :loading="busy === shop.id + 'reset'" />
+                </form>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="shops.length === 0">
+            <td class="px-3 py-3" colspan="6">Chưa có cửa hàng nào.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
-
-<style scoped>
-.page { max-width: 1100px; margin: 0 auto; padding: 2rem 1.25rem; }
-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; }
-h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
-header p { margin: 0; color: var(--p-text-muted-color); }
-table { width: 100%; border-collapse: collapse; background: var(--p-surface-0); }
-th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid var(--p-content-border-color); vertical-align: top; }
-th { font-size: 0.8rem; color: var(--p-text-muted-color); font-weight: 600; }
-.actions { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
-.reset { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
-.reset label { position: absolute; width: 1px; height: 1px; overflow: hidden; }
-</style>

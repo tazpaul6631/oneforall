@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Button from 'primevue/button';
+import FloatLabel from 'primevue/floatlabel';
 import InputText from 'primevue/inputtext';
 import { useToast } from 'primevue/usetoast';
 import { computed, onMounted, ref, watch } from 'vue';
@@ -79,77 +80,67 @@ async function pay() {
 </script>
 
 <template>
-  <h2>Bán vé</h2>
-  <p class="lead">Chọn suất, chọn ghế trống, rồi thu tiền. Ghế đang giữ hoặc đã bán không chọn được.</p>
-  <div class="layout">
-    <section>
-      <div class="shows">
-        <button v-for="s in shows" :key="s.id" type="button" :class="{ on: s.id === showId }" @click="showId = s.id">
+  <h2 class="mb-1">Bán vé</h2>
+  <p class="text-muted">Chọn suất, chọn ghế trống, rồi thu tiền. Ghế đang giữ hoặc đã bán không chọn được.</p>
+  <div class="mt-4 grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_260px] lg:grid-cols-[minmax(0,1fr)_280px]">
+    <section class="min-w-0">
+      <div class="mb-4 flex flex-wrap gap-2">
+        <button v-for="s in shows" :key="s.id" type="button" raised
+          class="flex cursor-pointer flex-col gap-0.5 rounded-[10px] border border-line bg-surface px-3 py-2 text-left font-[inherit]"
+          :class="s.id === showId && 'border-primary bg-primary-soft'" @click="showId = s.id">
           <strong>{{ s.movieTitle }}</strong>
           <span>{{ dateTime(s.startsAt) }} · {{ s.roomName }}</span>
-          <small>{{ s.seats - s.sold }} ghế trống</small>
+          <small class="text-muted">{{ s.seats - s.sold }} ghế trống</small>
         </button>
       </div>
-      <p v-if="!shows.length" class="muted">Chưa có suất. Thêm ở mục Lịch chiếu.</p>
-      <div v-if="plan" class="screen">Màn hình</div>
-      <div v-for="row in plan?.rows ?? []" :key="row.label" class="row">
-        <span class="row-label">{{ row.label }}</span>
-        <button
-          v-for="seat in row.seats"
-          :key="seat.id"
-          type="button"
-          class="seat"
-          :class="[seat.status, seat.kind, { on: picked.includes(seat.id) }]"
-          :disabled="seat.status !== 'free'"
-          :aria-label="`${seat.label} ${seat.status === 'free' ? 'trống' : 'không bán'}`"
-          @click="toggle(seat)"
-        >{{ seat.number }}</button>
+      <p v-if="!shows.length" class="text-muted">Chưa có suất. Thêm ở mục Lịch chiếu.</p>
+      <div v-if="plan"
+        class="mx-2 mb-4 border-b-[3px] border-line pb-1 text-center text-xs tracking-[0.2em] text-muted uppercase">Màn
+        hình</div>
+      <div class="overflow-x-auto">
+        <div v-for="row in plan?.rows ?? []" :key="row.label" class="mb-1.5 flex items-center gap-1.5">
+          <span class="w-5 font-semibold text-muted">{{ row.label }}</span>
+          <button v-for="seat in row.seats" :key="seat.id" type="button" raised
+            class="h-8 w-8 shrink-0 cursor-pointer rounded-t-md rounded-b-sm border border-line bg-surface font-[inherit] disabled:cursor-not-allowed disabled:bg-soft disabled:text-muted"
+            :class="[
+              seat.kind === 'vip' && 'border-primary',
+              picked.includes(seat.id) && 'bg-primary text-on-primary',
+              (seat.status === 'sold' || seat.status === 'held') && 'bg-soft',
+            ]" :disabled="seat.status !== 'free'"
+            :aria-label="`${seat.label} ${seat.status === 'free' ? 'trống' : 'không bán'}`" @click="toggle(seat)">{{
+              seat.number }}</button>
+        </div>
       </div>
     </section>
-    <aside>
-      <p v-if="plan" class="who">{{ plan.movieTitle }} · {{ plan.roomName }}</p>
-      <div class="customer">
+    <aside class="panel flex flex-col gap-2.5 p-4">
+      <p v-if="plan" class="m-0 text-muted">{{ plan.movieTitle }} · {{ plan.roomName }}</p>
+      <div class="flex flex-col gap-2">
         <template v-if="customer">
-          <span>{{ customer.name }}</span>
-          <Button icon="pi pi-times" text rounded size="small" aria-label="Bỏ khách" @click="customer = null" />
+          <div class="flex items-center justify-between gap-2">
+            <span>{{ customer.name }}</span>
+            <Button icon="pi pi-times" raised rounded size="small" aria-label="Bỏ khách" @click="customer = null" />
+          </div>
         </template>
         <template v-else>
-          <InputText v-model="customerQuery" placeholder="Gắn khách (không bắt buộc)" aria-label="Tìm khách hàng" fluid />
-          <button v-for="c in customerHits" :key="c.id" type="button" class="hit" @click="customer = c; customerQuery = ''">
+          <FloatLabel variant="on">
+            <InputText id="box-customer" v-model="customerQuery" fluid />
+            <label for="box-customer">Gắn khách (không bắt buộc)</label>
+          </FloatLabel>
+          <button v-for="c in customerHits" :key="c.id" type="button" raised
+            class="cursor-pointer rounded-lg border-0 bg-soft px-2 py-1.5 text-left font-[inherit]"
+            @click="customer = c; customerQuery = ''">
             {{ c.name }}
           </button>
         </template>
       </div>
-      <ul>
-        <li v-for="s in selected" :key="s.id"><span>{{ s.label }}<small v-if="s.kind === 'vip'"> VIP</small></span><b>{{ vnd(s.priceVnd) }}</b></li>
+      <ul class="m-0 flex list-none flex-col gap-1.5 p-0">
+        <li v-for="s in selected" :key="s.id" class="flex justify-between gap-2"><span>{{ s.label }}<small
+              v-if="s.kind === 'vip'"> VIP</small></span><b>{{ vnd(s.priceVnd) }}</b></li>
       </ul>
-      <p v-if="!selected.length" class="muted">Chưa chọn ghế.</p>
-      <p class="total">Tổng cộng <strong>{{ vnd(total) }}</strong></p>
-      <Button label="Thu tiền mặt" icon="pi pi-wallet" :loading="paying" :disabled="!selected.length" @click="pay" />
+      <p v-if="!selected.length" class="text-muted">Chưa chọn ghế.</p>
+      <p class="m-0 flex justify-between gap-2">Tổng cộng <strong>{{ vnd(total) }}</strong></p>
+      <Button label="Thu tiền mặt" icon="pi pi-wallet" raised :loading="paying" :disabled="!selected.length"
+        @click="pay" />
     </aside>
   </div>
 </template>
-
-<style scoped>
-h2 { margin-bottom: 0.35rem; }
-.lead, .muted, .who { color: var(--p-text-muted-color); }
-.layout { display: grid; grid-template-columns: 1fr 280px; gap: 1.25rem; align-items: start; margin-top: 1rem; }
-.shows { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-.shows button, .hit { font: inherit; text-align: left; cursor: pointer; }
-.shows button { border: 1px solid var(--p-content-border-color); background: var(--p-surface-0); border-radius: 10px; padding: 0.55rem 0.75rem; display: flex; flex-direction: column; gap: 0.15rem; }
-.shows button.on { border-color: var(--p-primary-color); background: var(--p-primary-50); }
-.shows small, .seat:disabled { color: var(--p-text-muted-color); }
-.screen { text-align: center; letter-spacing: 0.2em; font-size: 0.75rem; text-transform: uppercase; color: var(--p-text-muted-color); border-bottom: 3px solid var(--p-content-border-color); margin: 0.5rem 1.5rem 1rem; padding-bottom: 0.35rem; }
-.row { display: flex; gap: 0.35rem; align-items: center; margin-bottom: 0.35rem; }
-.row-label { width: 1.2rem; font-weight: 600; color: var(--p-text-muted-color); }
-.seat { width: 2rem; height: 2rem; border-radius: 6px 6px 2px 2px; border: 1px solid var(--p-content-border-color); background: var(--p-surface-0); font: inherit; cursor: pointer; }
-.seat.vip { border-color: var(--p-primary-color); }
-.seat.on { background: var(--p-primary-color); color: var(--p-primary-contrast-color); }
-.seat.sold, .seat.held { background: var(--p-surface-100); cursor: not-allowed; }
-aside, .customer { display: flex; flex-direction: column; gap: 0.65rem; }
-aside { background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 12px; padding: 1rem; }
-ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
-li, .total { display: flex; justify-content: space-between; gap: 0.5rem; }
-.hit { border: 0; background: var(--p-surface-100); border-radius: 8px; padding: 0.35rem 0.5rem; }
-@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
-</style>

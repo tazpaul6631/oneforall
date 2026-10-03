@@ -1,5 +1,151 @@
-:root { font-family: 'Be Vietnam Pro', system-ui, sans-serif; }
-body { margin: 0; background: var(--p-surface-50); color: var(--p-text-color); }
-.p-component, button, input { font-family: inherit; }
-h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
-:focus-visible { outline: 2px solid var(--p-primary-color); outline-offset: 2px; }
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --color-canvas: var(--p-surface-50);
+  --color-surface: var(--p-surface-0);
+  --color-soft: var(--p-surface-100);
+  --color-line: var(--p-content-border-color);
+  --color-ink: var(--p-text-color);
+  --color-muted: var(--p-text-muted-color);
+  --color-danger: var(--p-red-600);
+  --color-primary: var(--p-primary-color);
+  --color-primary-ink: var(--p-primary-700);
+  --color-primary-soft: var(--p-primary-50);
+  --color-on-primary: var(--p-primary-contrast-color);
+  --color-ok: var(--p-green-500);
+  --color-warn: var(--p-orange-400);
+  --color-sidebar: var(--p-surface-0);
+  --color-sidebar-2: var(--p-surface-100);
+  --color-accent: var(--p-primary-color);
+  --color-chrome: var(--p-surface-0);
+  --color-chrome-border: var(--p-content-border-color);
+}
+
+:root {
+  --font: var(--font-sans);
+  --p-font-family: var(--font-sans);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --bg: var(--color-canvas);
+  --ink: var(--color-ink);
+  --sidebar: var(--color-sidebar);
+  --sidebar-2: var(--color-sidebar-2);
+  --accent: var(--color-accent);
+  --chrome: var(--color-chrome);
+  --chrome-border: var(--color-chrome-border);
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--bg);
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  .p-component,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  h1,
+  h2,
+  h3 {
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    h1 {
+      font-size: 1.75rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+    }
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--p-primary-color);
+    outline-offset: 2px;
+  }
+
+  .p-datatable-table-container {
+    overflow-x: auto;
+  }
+
+  .p-selectbutton {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  .p-dialog {
+    max-width: calc(100vw - 1.5rem);
+  }
+}
+
+@utility page-head {
+  @apply mb-4 flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center;
+}
+
+@utility field {
+  @apply flex flex-col gap-1.5 text-sm font-medium;
+}
+
+@utility panel {
+  @apply rounded-xl border border-line bg-surface;
+}
+
+@utility chip {
+  @apply cursor-pointer rounded-full border border-line bg-surface px-3 py-1.5 font-[inherit] text-sm;
+}
+
+@utility tile {
+  @apply flex min-h-[84px] cursor-pointer flex-col gap-1 rounded-[10px] border border-line bg-surface p-3.5 text-left font-[inherit];
+}
+
+/* Ngoài layer để thắng CSS dialog của PrimeVue: chỉ danh sách thêm mới được cuộn. */
+.p-dialog-content.dialog-pin {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 8rem);
+  min-height: 0;
+  overflow: hidden !important;
+}
+
+.p-floatlabel-on {
+  display: block;
+  margin-top: 0.65rem;
+}

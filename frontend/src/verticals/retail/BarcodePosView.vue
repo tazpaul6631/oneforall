@@ -2,6 +2,7 @@
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputNumber from 'primevue/inputnumber';
+import FloatLabel from 'primevue/floatlabel';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import { useToast } from 'primevue/usetoast';
@@ -121,63 +122,58 @@ onMounted(() => focusScan());
 </script>
 
 <template>
-  <h2>Bán hàng (mã vạch)</h2>
-  <p class="lead">Quét mã hoặc gõ SKU rồi Enter. Mã nằm trên sản phẩm và từng phiên bản.</p>
-  <div class="layout">
-    <section>
-      <form class="scan" @submit.prevent="scan">
-        <InputText ref="codeEl" v-model="code" placeholder="Quét hoặc nhập mã" aria-label="Mã vạch" fluid />
-        <Button type="submit" label="Thêm" :disabled="!code.trim()" />
+  <h2 class="mb-1">Bán hàng (mã vạch)</h2>
+  <p class="text-muted">Quét mã hoặc gõ SKU rồi Enter. Mã nằm trên sản phẩm và từng phiên bản.</p>
+  <div class="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_240px] lg:grid-cols-[minmax(0,1fr)_260px]">
+    <section class="min-w-0">
+      <form class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end" @submit.prevent="scan">
+        <FloatLabel variant="on" class="w-full min-w-0 sm:flex-1">
+          <InputText id="barcode" ref="codeEl" v-model="code" fluid />
+          <label for="barcode">Quét hoặc nhập mã</label>
+        </FloatLabel>
+        <Button type="submit" raised label="Thêm" :disabled="!code.trim()" />
       </form>
       <Message v-if="scanError" severity="warn">{{ scanError }}</Message>
-      <p v-if="!cart.length" class="muted">Giỏ đang trống.</p>
-      <ul>
-        <li v-for="l in cart" :key="l.key">
-          <span>{{ l.name }}</span>
-          <span class="qty">
-            <Button icon="pi pi-minus" text rounded size="small" :aria-label="`Giảm ${l.name}`" @click="step(l, -1)" />
+      <p v-if="!cart.length" class="text-muted">Giỏ đang trống.</p>
+      <ul class="m-0 mt-2 flex list-none flex-col gap-2 p-0">
+        <li v-for="l in cart" :key="l.key"
+          class="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto_0.4fr]">
+          <span class="truncate">{{ l.name }}</span>
+          <span class="flex items-center">
+            <Button icon="pi pi-minus" raised rounded size="small" :aria-label="`Giảm ${l.name}`"
+              @click="step(l, -1)" />
             {{ l.qty }}
-            <Button icon="pi pi-plus" text rounded size="small" :aria-label="`Tăng ${l.name}`" @click="step(l, 1)" />
+            <Button icon="pi pi-plus" raised rounded size="small" :aria-label="`Tăng ${l.name}`" @click="step(l, 1)" />
           </span>
           <b>{{ vnd(l.unitPriceVnd * l.qty) }}</b>
         </li>
       </ul>
     </section>
-    <aside>
+    <aside class="panel flex flex-col gap-3 p-4">
       <Message v-if="previewError" severity="error" size="small">{{ previewError }}</Message>
-      <p v-if="preview" class="total">Tổng cộng <strong>{{ vnd(preview.totalVnd) }}</strong></p>
-      <Button label="Thanh toán" icon="pi pi-wallet" :disabled="!preview" @click="openPay" />
+      <p v-if="preview" class="m-0 flex justify-between">Tổng cộng <strong>{{ vnd(preview.totalVnd) }}</strong></p>
+      <Button label="Thanh toán" icon="pi pi-wallet" raised :disabled="!preview" @click="openPay" />
     </aside>
   </div>
 
-  <Dialog :visible="!!variantFor" modal :header="variantFor?.name" :style="{ width: '22rem' }" @update:visible="variantFor = null">
-    <div class="form">
-      <Button v-for="v in variantFor?.variants" :key="v.id" :label="`${v.name}${v.sku ? ' · ' + v.sku : ''} · ${vnd(v.priceVnd)}`" severity="secondary" outlined fluid @click="variantFor && add(variantFor, v); variantFor = null" />
+  <Dialog :visible="!!variantFor" modal :header="variantFor?.name"
+    :style="{ width: 'min(22rem, calc(100vw - 1.5rem))' }" @update:visible="variantFor = null">
+    <div class="flex flex-col gap-3">
+      <Button v-for="v in variantFor?.variants" :key="v.id"
+        :label="`${v.name}${v.sku ? ' · ' + v.sku : ''} · ${vnd(v.priceVnd)}`" severity="secondary" outlined raised
+        fluid @click="variantFor && add(variantFor, v); variantFor = null" />
     </div>
   </Dialog>
 
-  <Dialog v-model:visible="payOpen" modal header="Thanh toán" :style="{ width: '24rem' }">
-    <div class="form">
-      <p class="total">Cần thu <strong>{{ vnd(total) }}</strong></p>
-      <label>Tiền mặt<InputNumber v-model="cash" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid /></label>
+  <Dialog v-model:visible="payOpen" modal header="Thanh toán" :style="{ width: 'min(24rem, calc(100vw - 1.5rem))' }">
+    <div class="flex flex-col gap-3">
+      <p class="m-0 flex justify-between">Cần thu <strong>{{ vnd(total) }}</strong></p>
+      <label class="field">Tiền mặt
+        <InputNumber v-model="cash" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid />
+      </label>
       <Message v-if="payError" severity="warn" size="small">{{ payError }}</Message>
       <p v-else>Tiền thừa {{ vnd(Math.max(0, (cash ?? 0) - total)) }}</p>
-      <Button label="Xác nhận thu tiền" :loading="paying" :disabled="!!payError" fluid @click="confirmPay" />
+      <Button label="Xác nhận thu tiền" raised :loading="paying" :disabled="!!payError" fluid @click="confirmPay" />
     </div>
   </Dialog>
 </template>
-
-<style scoped>
-h2 { margin-bottom: 0.35rem; }
-.lead, .muted { color: var(--p-text-muted-color); }
-.layout { display: grid; grid-template-columns: 1fr 260px; gap: 1.25rem; align-items: start; }
-.scan { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
-ul { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
-li { display: grid; grid-template-columns: 1fr auto auto; gap: 0.5rem; align-items: center; }
-.qty { display: flex; align-items: center; }
-aside, .form { display: flex; flex-direction: column; gap: 0.75rem; }
-aside { background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 12px; padding: 1rem; }
-.total { display: flex; justify-content: space-between; margin: 0; }
-.form label { display: flex; flex-direction: column; gap: 0.35rem; font-weight: 500; }
-@media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
-</style>

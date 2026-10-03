@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Button from 'primevue/button';
 import InputNumber from 'primevue/inputnumber';
+import FloatLabel from 'primevue/floatlabel';
 import SelectButton from 'primevue/selectbutton';
 import { useToast } from 'primevue/usetoast';
 import { computed, reactive, ref } from 'vue';
@@ -36,18 +37,21 @@ async function save() {
 
 <template>
   <h2>Cài đặt</h2>
-  <form class="card" @submit.prevent="isOwner && save()">
+  <form class="panel mt-4 flex w-full max-w-xl flex-col items-start gap-4 p-4 sm:p-5"
+    @submit.prevent="isOwner && save()">
     <h3>Thuế GTGT</h3>
-    <label>Thuế suất (%)<InputNumber v-model="form.taxRatePercent" :min="0" :max="100" :max-fraction-digits="0" :disabled="!isOwner" /></label>
-    <label>Cách tính<SelectButton v-model="form.taxMode" :options="modes" option-label="l" option-value="v" :allow-empty="false" :disabled="!isOwner" aria-label="Cách tính thuế" /></label>
-    <p class="hint">Áp dụng cho các đơn tạo từ bây giờ. Đơn cũ giữ nguyên thuế suất tại thời điểm bán.</p>
-    <Button v-if="isOwner" type="submit" label="Lưu cài đặt" :loading="saving" />
-    <p v-else class="hint">Chỉ chủ cửa hàng được thay đổi cài đặt.</p>
+    <FloatLabel variant="on">
+      <InputNumber id="tax-rate-percent" v-model="form.taxRatePercent" :min="0" :max="100" :max-fraction-digits="0"
+        :disabled="!isOwner" fluid />
+      <label for="tax-rate-percent">Thuế suất (%)</label>
+    </FloatLabel>
+    <label class="field w-full">Cách tính
+      <SelectButton v-model="form.taxMode" :options="modes" option-label="l" option-value="v" :allow-empty="false"
+        :disabled="!isOwner" aria-label="Cách tính thuế" />
+    </label>
+    <p class="m-0 text-sm text-muted">Áp dụng cho các đơn tạo từ bây giờ. Đơn cũ giữ nguyên thuế suất tại thời điểm bán.
+    </p>
+    <Button v-if="isOwner" type="submit" label="Lưu cài đặt" :loading="saving" fluid raised />
+    <p v-else class="m-0 text-sm text-muted">Chỉ chủ cửa hàng được thay đổi cài đặt.</p>
   </form>
 </template>
-
-<style scoped>
-.card { margin-top: 1rem; max-width: 28rem; background: var(--p-surface-0); border: 1px solid var(--p-content-border-color); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; align-items: flex-start; }
-label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.9rem; font-weight: 500; }
-.hint { margin: 0; font-size: 0.85rem; color: var(--p-text-muted-color); }
-</style>

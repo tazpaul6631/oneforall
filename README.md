@@ -41,7 +41,7 @@ Trên trình duyệt, để trống `VITE_API_URL` trong `frontend/.env`. Vite c
 
 APK không dùng được `localhost`, vì đó là chính điện thoại. Sao chép `frontend/.env.example` thành `frontend/.env` rồi điền:
 
-- Cài bằng Android Studio qua cáp USB: `VITE_API_URL=http://127.0.0.1:3000`. Lúc bấm Run, Gradle chạy `adb reverse` để cổng 3000 trên máy tính hiện ra ở tablet.
+- Cài bằng Android Studio qua cáp USB: `VITE_API_URL=http://127.0.0.1:3000`. Bấm Run thì Gradle chuyển cổng 3000 của mọi máy đang cắm về máy tính. Cắm lại máy mà không Run thì trong `frontend` chạy `npm run usb`.
 - Máy ảo Android trên cùng máy tính: `VITE_API_URL=http://10.0.2.2:3000`
 - Điện thoại thật, cùng Wi-Fi: `VITE_API_URL=http://<IP máy tính>:3000` (IPv4 trong `ipconfig`)
 
