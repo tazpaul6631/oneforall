@@ -123,7 +123,7 @@ onMounted(() => focusScan());
 
 <template>
   <h2 class="mb-1">Bán hàng (mã vạch)</h2>
-  <p class="text-muted">Quét mã hoặc gõ SKU rồi Enter. Mã nằm trên sản phẩm và từng phiên bản.</p>
+  <p class="text-muted">Quét mã hoặc gõ SKU rồi Enter. Mã nằm trên sản phẩm và từng size.</p>
   <div class="grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_240px] lg:grid-cols-[minmax(0,1fr)_260px]">
     <section class="min-w-0">
       <form class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end" @submit.prevent="scan">

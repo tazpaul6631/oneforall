@@ -73,79 +73,85 @@ function fillDemo(email: string) {
 </script>
 
 <template>
-  <div
-    class="grid min-h-dvh items-center gap-6 p-4 md:p-8 lg:grid-cols-[minmax(280px,1fr)_minmax(360px,480px)] lg:gap-16 lg:px-[6vw]">
-    <section class="max-w-lg lg:justify-self-end">
-      <h1 class="mb-3 text-3xl md:mb-4 md:text-5xl">OneStore</h1>
-      <p class="m-0 text-base leading-relaxed text-muted md:text-lg">Một nền tảng cho quán cà phê, nhà hàng, cửa hàng
-        bán lẻ và rạp chiếu phim. Mỗi tài khoản thấy đúng màn hình và quy trình của mô hình mình dùng.</p>
-    </section>
+  <div class="flex min-h-dvh w-full flex-col">
+    <div
+      class="m-auto grid w-full min-w-0 max-w-md gap-5 pt-[max(1.25rem,var(--safe-top))] pr-[max(1rem,var(--safe-right))] pb-[max(1.25rem,var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] md:max-w-lg md:gap-6 md:px-2 lg:max-w-5xl lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-center lg:gap-16 lg:px-10">
+      <section class="min-w-0 lg:max-w-md lg:justify-self-end">
+        <h1 class="text-[1.75rem] leading-tight md:text-4xl lg:text-5xl">OneStore</h1>
+        <p class="m-0 mt-2 text-sm leading-relaxed text-muted md:mt-3 md:text-base">Một nền tảng cho quán cà phê, nhà
+          hàng, cửa hàng bán lẻ và rạp chiếu phim. Mỗi tài khoản thấy đúng màn hình và quy trình của mô hình mình dùng.
+        </p>
+      </section>
 
-    <section class="panel p-4 sm:p-6">
-      <div class="mb-5 flex gap-6 border-b border-line" role="tablist">
-        <button type="button" role="tab" raised
-          class="-mb-px cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-0 pt-2 pb-3 font-[inherit] font-medium text-muted"
-          :aria-selected="mode === 'login'" :class="mode === 'login' && 'border-primary text-ink'"
-          @click="mode = 'login'; error = ''">Đăng nhập</button>
-        <button type="button" role="tab" raised
-          class="-mb-px cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-0 pt-2 pb-3 font-[inherit] font-medium text-muted"
-          :aria-selected="mode === 'register'" :class="mode === 'register' && 'border-primary text-ink'"
-          @click="mode = 'register'; error = ''">Tạo cửa hàng</button>
-      </div>
-
-      <form class="flex flex-col gap-4" @submit.prevent="submit">
-        <template v-if="mode === 'register'">
-          <FloatLabel variant="on">
-            <InputText id="tenant-name" v-model="f.tenantName" fluid autocomplete="organization" />
-            <label for="tenant-name">Tên cửa hàng</label>
-          </FloatLabel>
-          <fieldset class="m-0 flex flex-col gap-2 border-0 p-0">
-            <legend class="mb-1 p-0 text-sm font-medium">Mô hình kinh doanh</legend>
-            <label v-for="p in presets" :key="p.key"
-              class="relative flex cursor-pointer flex-col gap-0.5 rounded-lg border border-line px-3 py-2.5"
-              :class="f.preset === p.key && 'border-primary bg-primary-soft'">
-              <input class="absolute opacity-0" type="radio" v-model="f.preset" :value="p.key" />
-              <strong>{{ p.label }}</strong>
-              <span class="text-[0.82rem] font-normal text-muted">{{ p.description }}</span>
-            </label>
-          </fieldset>
-          <FloatLabel variant="on">
-            <InputText id="owner-name" v-model="f.fullName" fluid autocomplete="name" />
-            <label for="owner-name">Họ tên chủ cửa hàng</label>
-          </FloatLabel>
-        </template>
-
-        <FloatLabel variant="on">
-          <InputText id="login-email" v-model="f.email" type="email" fluid autocomplete="email" />
-          <label for="login-email">Email</label>
-        </FloatLabel>
-        <label class="field">
-          Mật khẩu
-          <Password v-model="f.password" :feedback="false" toggle-mask fluid
-            :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" />
-          <small v-if="mode === 'register'" class="font-normal text-muted">Ít nhất 8 ký tự</small>
-        </label>
-
-        <Message v-if="notice" severity="success" size="small">{{ notice }}</Message>
-        <Message v-if="error" severity="error" size="small">{{ error }}</Message>
-        <Button type="submit" raised :label="mode === 'login' ? 'Đăng nhập' : 'Tạo cửa hàng'" :loading="loading"
-          :disabled="!canSubmit" fluid />
-      </form>
-
-      <div v-if="isDev && mode === 'login'"
-        class="mt-5 flex flex-col gap-2 border-t border-dashed border-line pt-4 text-[0.82rem] text-muted">
-        <span>Tài khoản mẫu (sau khi chạy <code>npm run seed</code>):</span>
-        <div class="flex flex-wrap gap-2">
-          <Button size="small" severity="secondary" outlined raised label="Quán cà phê"
-            @click="fillDemo('cafe@demo.vn')" />
-          <Button size="small" severity="secondary" outlined raised label="Nhà hàng"
-            @click="fillDemo('nhahang@demo.vn')" />
-          <Button size="small" severity="secondary" outlined raised label="Cửa hàng"
-            @click="fillDemo('shop@demo.vn')" />
-          <Button size="small" severity="secondary" outlined raised label="Rạp chiếu phim"
-            @click="fillDemo('rap@demo.vn')" />
+      <section class="panel w-full min-w-0 p-4 shadow-sm sm:p-6">
+        <div class="mb-4 grid grid-cols-2 border-b border-line" role="tablist">
+          <button type="button" role="tab"
+            class="-mb-px cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-2 pt-2 pb-3 text-center font-[inherit] text-sm font-medium text-muted sm:text-base"
+            :aria-selected="mode === 'login'" :class="mode === 'login' && 'border-primary font-semibold text-ink'"
+            @click="mode = 'login'; error = ''">Đăng nhập</button>
+          <button type="button" role="tab"
+            class="-mb-px cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-2 pt-2 pb-3 text-center font-[inherit] text-sm font-medium text-muted sm:text-base"
+            :aria-selected="mode === 'register'"
+            :class="mode === 'register' && 'border-primary font-semibold text-ink'"
+            @click="mode = 'register'; error = ''">Tạo cửa hàng</button>
         </div>
-      </div>
-    </section>
+
+        <form class="flex flex-col gap-3" @submit.prevent="submit">
+          <template v-if="mode === 'register'">
+            <FloatLabel class="mt-0!" variant="on">
+              <InputText id="tenant-name" v-model="f.tenantName" fluid autocomplete="organization" />
+              <label for="tenant-name">Tên cửa hàng</label>
+            </FloatLabel>
+            <fieldset class="m-0 min-w-0 border-0 p-0">
+              <legend class="mb-2 p-0 text-sm font-medium">Mô hình kinh doanh</legend>
+              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <label v-for="p in presets" :key="p.key"
+                  class="relative flex min-w-0 cursor-pointer flex-col gap-0.5 rounded-lg border border-line px-3 py-2"
+                  :class="f.preset === p.key && 'border-primary bg-primary-soft'">
+                  <input class="absolute opacity-0" type="radio" v-model="f.preset" :value="p.key" />
+                  <strong class="text-sm wrap-break-word">{{ p.label }}</strong>
+                  <span class="text-sm leading-snug font-normal wrap-break-word text-muted">{{ p.description }}</span>
+                </label>
+              </div>
+            </fieldset>
+            <FloatLabel class="mt-0!" variant="on">
+              <InputText id="owner-name" v-model="f.fullName" fluid autocomplete="name" />
+              <label for="owner-name">Họ tên chủ cửa hàng</label>
+            </FloatLabel>
+          </template>
+
+          <FloatLabel class="mt-0!" variant="on">
+            <InputText id="login-email" v-model="f.email" type="email" fluid autocomplete="email" />
+            <label for="login-email">Email</label>
+          </FloatLabel>
+          <FloatLabel class="mt-0!" variant="on">
+            <Password class="w-full" inputId="login-password" v-model="f.password" :feedback="false" toggle-mask fluid
+              :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" />
+            <label for="login-password">Mật khẩu</label>
+          </FloatLabel>
+          <small v-if="mode === 'register'" class="text-sm font-normal text-muted">Ít nhất 8 ký tự</small>
+
+          <Message v-if="notice" severity="success" size="small">{{ notice }}</Message>
+          <Message v-if="error" severity="error" size="small">{{ error }}</Message>
+          <Button type="submit" raised :label="mode === 'login' ? 'Đăng nhập' : 'Tạo cửa hàng'" :loading="loading"
+            :disabled="!canSubmit" fluid />
+        </form>
+
+        <div v-if="isDev && mode === 'login'"
+          class="mt-4 flex flex-col gap-2 border-t border-dashed border-line pt-4 text-sm text-muted">
+          <span class="wrap-break-word">Tài khoản mẫu (sau khi chạy <code>npm run seed</code>):</span>
+          <div class="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+            <Button class="w-full" size="small" severity="secondary" outlined raised label="Quán cà phê"
+              @click="fillDemo('cafe@demo.vn')" />
+            <Button class="w-full" size="small" severity="secondary" outlined raised label="Nhà hàng"
+              @click="fillDemo('nhahang@demo.vn')" />
+            <Button class="w-full" size="small" severity="secondary" outlined raised label="Cửa hàng"
+              @click="fillDemo('shop@demo.vn')" />
+            <Button class="w-full" size="small" severity="secondary" outlined raised label="Rạp chiếu phim"
+              @click="fillDemo('rap@demo.vn')" />
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>

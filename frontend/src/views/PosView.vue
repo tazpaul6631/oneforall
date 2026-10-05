@@ -135,7 +135,7 @@ const needVariant = computed(() => {
     return !!p?.variants.length && !l.variantId;
   });
   const p = line ? lineProduct(line) : undefined;
-  return p ? `"${p.name}" cần chọn phiên bản` : '';
+  return p ? `"${p.name}" cần chọn size` : '';
 });
 function groupHint(g: ModifierGroup) {
   const min = g.required ? Math.max(g.minSelect, 1) : g.minSelect;
@@ -298,8 +298,8 @@ async function confirmPay() {
         <button v-for="p in visible" :key="p.id" type="button" class="tile hover:border-primary" raised
           @click="pick(p)">
           <strong>{{ p.name }}</strong>
-          <span class="text-sm text-muted">{{ p.variants.length ? `${p.variants.length} phiên bản` : vnd(p.priceVnd)
-          }}</span>
+          <span class="text-sm text-muted">{{ p.variants.length ? `${p.variants.length} size` : vnd(p.priceVnd)
+            }}</span>
           <small v-if="p.sku" class="text-sm text-muted">{{ p.sku }}</small>
         </button>
       </div>
@@ -329,8 +329,9 @@ async function confirmPay() {
         </template>
       </div>
       <p v-if="!cart.length" class="my-2 text-muted">Chọn sản phẩm bên trái để thêm vào đơn.</p>
-      <ul v-else class="m-0 flex max-h-[60vh] list-none flex-col gap-2.5 overflow-y-auto p-0">
-        <li v-for="(l, i) in cart" :key="l.key" class="flex flex-col gap-1.5 text-sm">
+      <ul v-else class="m-0 flex max-h-[50dvh] list-none flex-col overflow-y-auto p-0">
+        <li v-for="(l, i) in cart" :key="l.key" class="flex flex-col gap-1.5 py-3 text-sm"
+          :class="i > 0 && 'border-t border-line'">
           <div class="grid grid-cols-[minmax(0,1fr)_auto_0.4fr] items-center gap-2">
             <div class="flex min-w-0 flex-col"><span class="wrap-break-word">{{ lineLabel(i) }}</span><small
                 class="text-muted">{{ vnd(linePrice(i)) }}</small></div>
@@ -343,30 +344,35 @@ async function confirmPay() {
             </div>
             <b class="text-right">{{ vnd(lineTotal(i)) }}</b>
           </div>
-          <div v-if="lineProduct(l)?.variants.length" class="flex flex-col gap-1">
-            <span class="font-medium">Phiên bản</span>
-            <div class="flex flex-wrap gap-1">
-              <button v-for="v in lineProduct(l)?.variants ?? []" :key="v.id" type="button"
-                class="cursor-pointer rounded-full border px-2.5 py-1 text-sm"
-                :class="l.variantId === v.id ? 'border-primary bg-primary text-on-primary' : 'border-line bg-surface'"
-                @click="chooseLineVariant(l, v.id)">{{ v.name }}</button>
+          <div class="flex flex-col gap-1.5 pl-3">
+            <div v-if="lineProduct(l)?.variants.length" class="flex flex-col gap-1">
+              <span class="font-medium">Size<span v-if="!l.variantId" class="text-danger" title="Bắt buộc">
+                  *</span></span>
+              <div class="flex flex-wrap gap-1">
+                <button v-for="v in lineProduct(l)?.variants ?? []" :key="v.id" type="button"
+                  class="cursor-pointer rounded-full border px-2.5 py-1 text-sm"
+                  :class="l.variantId === v.id ? 'border-primary bg-primary text-on-primary' : 'border-line bg-surface'"
+                  @click="chooseLineVariant(l, v.id)">{{ v.name }}</button>
+              </div>
             </div>
-          </div>
-          <div v-for="g in lineGroups(l)" :key="g.id" class="flex flex-col gap-1">
-            <span class="font-medium">{{ g.name }} <span class="font-normal text-muted">{{ groupHint(g) }}</span></span>
-            <div class="flex flex-wrap gap-1">
-              <button v-for="o in g.options" :key="o.id" type="button"
-                class="cursor-pointer rounded-full border px-2.5 py-1 text-sm"
-                :class="l.optionIds.includes(o.id) ? 'border-primary bg-primary text-on-primary' : 'border-line bg-surface'"
-                @click="toggleLineOption(l, g, o.id)">
-                {{ o.name }}<span v-if="o.extraVnd"> +{{ vnd(o.extraVnd) }}</span>
-              </button>
+            <div v-for="g in lineGroups(l)" :key="g.id" class="flex flex-col gap-1">
+              <span class="font-medium">{{ g.name }}<span v-if="g.required" class="text-danger" title="Bắt buộc">
+                  *</span>
+                <span class="font-normal text-muted">{{ groupHint(g) }}</span></span>
+              <div class="flex flex-wrap gap-1">
+                <button v-for="o in g.options" :key="o.id" type="button"
+                  class="cursor-pointer rounded-full border px-2.5 py-1 text-sm"
+                  :class="l.optionIds.includes(o.id) ? 'border-primary bg-primary text-on-primary' : 'border-line bg-surface'"
+                  @click="toggleLineOption(l, g, o.id)">
+                  {{ o.name }}<span v-if="o.extraVnd"> +{{ vnd(o.extraVnd) }}</span>
+                </button>
+              </div>
             </div>
+            <FloatLabel variant="on">
+              <InputText :id="`line-note-${i}`" v-model="l.note" fluid />
+              <label :for="`line-note-${i}`">Ghi chú</label>
+            </FloatLabel>
           </div>
-          <FloatLabel variant="on">
-            <InputText :id="`line-note-${i}`" v-model="l.note" fluid />
-            <label :for="`line-note-${i}`">Ghi chú, ví dụ ít ngọt</label>
-          </FloatLabel>
         </li>
       </ul>
 
@@ -408,7 +414,7 @@ async function confirmPay() {
     <Dialog v-model:visible="payOpen" modal header="Thanh toán" :style="{ width: 'min(26rem, calc(100vw - 1.5rem))' }">
       <div class="flex flex-col gap-3">
         <div class="flex items-baseline justify-between"><span>Cần thu</span><strong class="text-xl">{{ vnd(total)
-        }}</strong></div>
+            }}</strong></div>
         <label class="field">Tiền mặt khách đưa
           <InputNumber v-model="cash" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid />
         </label>

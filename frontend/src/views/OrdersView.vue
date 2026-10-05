@@ -6,6 +6,7 @@ import Dialog from 'primevue/dialog';
 import InputNumber from 'primevue/inputnumber';
 import FloatLabel from 'primevue/floatlabel';
 import InputText from 'primevue/inputtext';
+import Message from 'primevue/message';
 import SelectButton from 'primevue/selectbutton';
 import Tag from 'primevue/tag';
 import { useToast } from 'primevue/usetoast';
@@ -83,6 +84,49 @@ async function submitRefund() {
     toast.add({ severity: 'error', summary: 'Chưa hoàn được tiền', detail: e.message, life: 5000 });
   } finally {
     refunding.value = false;
+  }
+}
+
+const payOpen = ref(false);
+const paying = ref(false);
+const cash = ref<number | null>(0);
+const transfer = ref<number | null>(0);
+const payKey = ref('');
+const quick = [50000, 100000, 200000, 500000];
+const due = computed(() => detail.value?.totalVnd ?? 0);
+const paidSum = computed(() => (cash.value ?? 0) + (transfer.value ?? 0));
+const change = computed(() => paidSum.value - due.value);
+const payError = computed(() =>
+  paidSum.value < due.value ? `Còn thiếu ${vnd(due.value - paidSum.value)}` : (transfer.value ?? 0) > due.value ? 'Chuyển khoản không được vượt quá số cần thu' : '',
+);
+
+function openPay() {
+  cash.value = due.value;
+  transfer.value = 0;
+  payKey.value = newKey();
+  payOpen.value = true;
+}
+async function confirmPay() {
+  if (!detail.value || payError.value) return;
+  paying.value = true;
+  try {
+    const payments = [
+      { method: 'cash', amountVnd: cash.value ?? 0 },
+      { method: 'transfer', amountVnd: transfer.value ?? 0 },
+    ].filter((p) => p.amountVnd > 0);
+    detail.value = await api<OrderDetail>(`/orders/${detail.value.id}/pay`, { body: { payments, idempotencyKey: payKey.value } });
+    toast.add({
+      severity: 'success',
+      summary: `Đã thanh toán đơn ${orderCode(detail.value.seq)}`,
+      detail: detail.value.changeVnd > 0 ? `Tiền thừa trả khách: ${vnd(detail.value.changeVnd)}` : undefined,
+      life: 6000,
+    });
+    payOpen.value = false;
+    await load();
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: 'Chưa thanh toán được', detail: e.message, life: 6000 });
+  } finally {
+    paying.value = false;
   }
 }
 
@@ -198,11 +242,37 @@ async function voidOrder() {
         </dl>
       </template>
       <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <Button v-if="detail.status === 'open'" class="w-full sm:w-auto" label="Thanh toán" icon="pi pi-wallet" raised
+          @click="openPay" />
         <Button v-if="detail.status === 'open' && canManage" class="w-full sm:w-auto" label="Hủy đơn" severity="danger"
           outlined raised @click="voidOrder" />
         <Button v-if="canRefund" class="w-full sm:w-auto" label="Hoàn tiền" severity="secondary" outlined raised
           @click="openRefund" />
       </div>
+    </div>
+  </Dialog>
+
+  <Dialog v-model:visible="payOpen" modal header="Thanh toán" :style="{ width: 'min(26rem, calc(100vw - 1.5rem))' }">
+    <div class="flex flex-col gap-3">
+      <div class="flex items-baseline justify-between"><span>Cần thu</span><strong class="text-xl">{{ vnd(due) }}</strong>
+      </div>
+      <label class="field">Tiền mặt khách đưa
+        <InputNumber v-model="cash" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid />
+      </label>
+      <div class="flex flex-wrap gap-1.5">
+        <Button label="Đủ" size="small" severity="secondary" outlined raised @click="cash = due; transfer = 0" />
+        <Button v-for="q in quick" :key="q" :label="vnd(q)" size="small" severity="secondary" outlined raised
+          @click="cash = q" />
+      </div>
+      <label class="field">Chuyển khoản
+        <InputNumber v-model="transfer" :min="0" :max-fraction-digits="0" locale="vi-VN" fluid />
+      </label>
+      <Button label="Thu đủ bằng chuyển khoản" size="small" severity="secondary" raised
+        @click="transfer = due; cash = 0" />
+      <Message v-if="payError" severity="warn" size="small">{{ payError }}</Message>
+      <div v-else class="flex items-baseline justify-between"><span>Tiền thừa trả khách</span><strong class="text-xl">{{
+        vnd(Math.max(0, change)) }}</strong></div>
+      <Button label="Xác nhận thu tiền" raised :loading="paying" :disabled="!!payError" fluid @click="confirmPay" />
     </div>
   </Dialog>
 

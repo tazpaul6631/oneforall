@@ -82,14 +82,21 @@ async function receive() {
   <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
     <p v-if="loading" class="m-0 text-sm text-muted md:col-span-2">Đang tải tồn kho...</p>
     <p v-else-if="!items.length" class="m-0 text-muted md:col-span-2">Chưa có sản phẩm đang bán.</p>
-    <article v-for="item in items" :key="item.name" class="panel flex flex-col gap-2 p-3">
-      <div class="flex items-start justify-between gap-2">
-        <strong class="min-w-0">{{ item.name }}</strong>
-        <span :class="item.qty !== null && item.qty <= 0 ? 'font-semibold text-danger' : 'font-semibold'">{{ item.qty
-          === null ? 'Chưa nhập' : item.qty }}</span>
+    <article v-for="item in items" :key="item.name" class="panel flex flex-col gap-3 p-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <strong class="block wrap-break-word">{{ item.name }}</strong>
+          <p v-if="item.sku" class="m-0 mt-1 text-sm text-muted">{{ item.sku }}</p>
+        </div>
+        <div class="shrink-0 text-right">
+          <span class="block text-xs text-muted">Tồn</span>
+          <span class="font-semibold" :class="[
+            item.qty === null ? 'text-sm' : 'text-lg leading-none',
+            item.qty !== null && item.qty <= 0 && 'text-danger',
+          ]">{{ item.qty === null ? 'Chưa nhập' : item.qty }}</span>
+        </div>
       </div>
-      <p class="m-0 text-sm text-muted">{{ item.sku || 'Không có mã' }}</p>
-      <Button v-if="canEdit" class="self-start" label="Nhập kho" raised size="small" @click="openReceive(item)" />
+      <Button v-if="canEdit" class="w-full" label="Nhập kho" raised size="small" @click="openReceive(item)" />
     </article>
   </div>
   <DataTable v-if="!loadError" class="hidden! lg:block!" :value="items" :loading="loading" data-key="name" size="small">
@@ -110,11 +117,15 @@ async function receive() {
 
   <h3 v-if="moves.length" class="mt-5 mb-2">Phiếu kho gần đây</h3>
   <ul v-if="moves.length" class="m-0 flex list-none flex-col gap-2 p-0">
-    <li v-for="m in moves" :key="m.id"
-      class="grid grid-cols-1 gap-1 text-sm sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-4">
-      <span>{{ reasonLabel[m.reason] ?? m.reason }} · {{ m.name }}</span>
-      <b :class="m.delta < 0 && 'text-danger'">{{ m.delta > 0 ? `+${m.delta}` : m.delta }}</b>
-      <small class="text-muted">{{ dateTime(m.createdAt) }}</small>
+    <li v-for="m in moves" :key="m.id" class="panel flex items-start justify-between gap-3 p-3 text-sm">
+      <div class="min-w-0">
+        <span class="font-medium">{{ reasonLabel[m.reason] ?? m.reason }}</span>
+        <p class="m-0 mt-0.5 wrap-break-word">{{ m.name }}</p>
+        <p v-if="m.note" class="m-0 mt-0.5 text-muted">{{ m.note }}</p>
+        <p class="m-0 mt-1 text-xs text-muted">{{ dateTime(m.createdAt) }}</p>
+      </div>
+      <b class="shrink-0 text-base" :class="m.delta < 0 ? 'text-danger' : m.delta > 0 ? 'text-ok' : ''">{{ m.delta > 0 ?
+        `+${m.delta}` : m.delta }}</b>
     </li>
   </ul>
 

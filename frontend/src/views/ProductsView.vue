@@ -230,15 +230,15 @@ async function deleteCategory(c: Category) {
       <p class="m-0 text-sm text-muted">{{ catName(p.categoryId) }}<span v-if="p.sku"> · {{ p.sku }}</span></p>
       <p v-if="p.variants.length" class="m-0 text-sm">{{p.variants.map((v) => v.name).join(', ')}}</p>
       <p v-if="groupNames(p.modifierGroupIds)" class="m-0 text-sm text-muted">Món kèm: {{ groupNames(p.modifierGroupIds)
-      }}</p>
+        }}</p>
       <div class="flex items-center justify-between gap-2">
         <strong>{{ vnd(p.priceVnd) }}</strong>
         <div v-if="canEdit" class="flex flex-wrap justify-end gap-2">
           <Button icon="pi pi-trash" raised severity="danger" size="small" aria-label="Xóa sản phẩm"
             @click="deleteProduct(p)" />
-          <Button label="Sửa" raised size="small" @click="openEdit(p)" />
-          <Button :label="p.active ? 'Ngừng bán' : 'Bán lại'" raised size="small" severity="secondary"
-            @click="toggleActive(p)" />
+          <Button icon="pi pi-pen-to-square" severity="secondary" raised size="small" @click="openEdit(p)" />
+          <Button :icon="p.active ? 'pi pi-check-circle' : 'pi pi-times-circle'" raised size="small"
+            :severity="p.active ? 'success' : 'warning'" @click="toggleActive(p)" />
         </div>
       </div>
     </article>
@@ -250,8 +250,8 @@ async function deleteCategory(c: Category) {
     <Column header="Mã"><template #body="{ data }">{{ data.sku || '—' }}</template></Column>
     <Column header="Danh mục"><template #body="{ data }">{{ catName(data.categoryId) }}</template></Column>
     <Column header="Giá"><template #body="{ data }">{{ vnd(data.priceVnd) }}</template></Column>
-    <Column header="Phiên bản"><template #body="{ data }">{{data.variants.map((v: any) => v.name).join(', ') || '—'
-        }}</template></Column>
+    <Column header="Size"><template #body="{ data }">{{data.variants.map((v: any) => v.name).join(', ') || '—'
+    }}</template></Column>
     <Column header="Món kèm"><template #body="{ data }">{{ groupNames(data.modifierGroupIds) || '—' }}</template>
     </Column>
     <Column header="Trạng thái"><template #body="{ data }">
@@ -302,14 +302,14 @@ async function deleteCategory(c: Category) {
           <label v-for="g in groups" :key="g.id" class="flex min-w-0 shrink-0 items-center gap-2 text-sm font-normal">
             <input v-model="form.modifierGroupIds" class="shrink-0" type="checkbox" :value="g.id" />
             <span class="min-w-0">{{ g.name }}<span class="text-muted">{{ g.required ? ' · bắt buộc' : ''
-                }}</span></span>
+            }}</span></span>
           </label>
         </div>
       </div>
 
       <div class="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden rounded-lg border border-line p-3" role="group"
         aria-labelledby="product-variants">
-        <p id="product-variants" class="m-0 shrink-0 text-sm font-medium">Phiên bản (size, màu...)</p>
+        <p id="product-variants" class="m-0 shrink-0 text-sm font-medium">Size</p>
         <div class="flex min-h-0 flex-col gap-2 overflow-y-auto max-h-[10rem]">
           <div v-for="(v, i) in form.variants" :key="i"
             class="grid shrink-0 grid-cols-[minmax(0,1.1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto] items-end gap-2">
@@ -323,14 +323,13 @@ async function deleteCategory(c: Category) {
             </FloatLabel>
             <FloatLabel variant="on" class="min-w-0">
               <InputNumber v-model="v.priceVnd" class="min-w-0" fluid :min="0" :max-fraction-digits="0" locale="vi-VN"
-                aria-label="Giá phiên bản" />
+                aria-label="Giá" />
               <label :for="`variant-price-${i}`">Giá</label>
             </FloatLabel>
-            <Button icon="pi pi-trash" raised severity="danger" aria-label="Xóa phiên bản"
-              @click="form.variants.splice(i, 1)" />
+            <Button icon="pi pi-trash" raised severity="danger" aria-label="Xóa" @click="form.variants.splice(i, 1)" />
           </div>
         </div>
-        <Button class="shrink-0 self-start" label="Thêm phiên bản" icon="pi pi-plus" raised size="small"
+        <Button class="shrink-0 self-start" label="Thêm" icon="pi pi-plus" raised size="small"
           @click="form.variants.push({ name: '', sku: '', priceVnd: form.priceVnd })" />
       </div>
 
@@ -370,7 +369,7 @@ async function deleteCategory(c: Category) {
       <ul v-if="groups.length" class="m-0 flex min-h-0 list-none flex-col gap-2 overflow-y-auto max-h-[10rem] p-0">
         <li v-for="g in groups" :key="g.id" class="flex shrink-0 items-center justify-between gap-2">
           <span class="min-w-0">{{ g.name }}<small class="block text-muted">{{g.options.map((o) => o.name).join(', ')
-          }}</small></span>
+              }}</small></span>
           <div class="flex shrink-0 gap-2">
             <Button label="Sửa" raised size="small" @click="openGroup(g)" />
             <Button icon="pi pi-trash" raised severity="danger" size="small" aria-label="Xóa nhóm"
